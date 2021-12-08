@@ -1,0 +1,11 @@
+5 dec
+
+Räckvidd 50 km
+Hastighet 20 km/h, 20km/60 min 333 m/ 1 min
+Kostnad 2 kr/min
+
+100% = 42 km
+50% = 21 km
+
+Sätta gräns för cyklar i cykelns program. Använda lat/long. Problem: Behöver veta stad. Hur?
+Jämför cykels city_id med city id. Baserat på svar, begränsa utrymme att åka.
