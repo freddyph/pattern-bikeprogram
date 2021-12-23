@@ -22,15 +22,15 @@ priser = requests.get(link+"prices").json()
 global status_batteri
 kundens_id = user["user"]["_id"]
 balans_konto = user["user"]["balance"]
-status_batteri =int(cykel["bike"]["battery_status"])
+status_batteri =float(cykel["bike"]["battery_status"])
+#status_batteri = 0.2
 
 #Kostnadsuppgifter
-pristariff = priser["prices"][0]["price_per_minute"]
-tid_per_km = 3
-startkostnad = priser["prices"][0]["starting_fee"]
+pris_per_minut = priser["prices"][0]["price_per_minute"]
+start_avgift = priser["prices"][0]["starting_fee"]
 straffavgift = priser["prices"][0]["penalty_fee"]
 avdrag_bra_parkering = priser["prices"][0]["discount"]
-travel_time = balans_konto / pristariff
+travel_time = balans_konto / pris_per_minut
 
 
 #Tidspunkter
@@ -50,7 +50,7 @@ def print_menu():
     """Meny program"""
     print("\n=========== CYKELNS PROGRAM ===========")
     print("\nVälkommen", user["user"]["firstname"], "vad vill du göra?")
-    print("\nDu har ", travel_time(balans_konto, status_batteri, pristariff), "minuter kvar att åka")
+    print("\nDu har ", travel_time(balans_konto, status_batteri, pris_per_minut), "minuter kvar att åka")
     print("\nVad vill du göra?")
     print("1.",bike_status())
     print("2. Ange var du vill åka (lat/long)")
@@ -130,28 +130,78 @@ def travel_kor():
     old_location = (cykel["bike"]["coordinates"]["lat"], cykel["bike"]["coordinates"]["long"])
     sträcka = distance.distance(new_location, old_location).km
     print(f"Den inlagda sträcka är {sträcka:.1f} km lång")
-    tidsåtgång = sträcka * tid_per_km
+    tidsåtgång = sträcka * pris_per_minut
     print(f"Beräknas ta ungefär {tidsåtgång:.1f} minuter att åka")
 
 
-def resa(value = True):
+def resa():
     """För resor"""
     global kontroll_tid
     global status_batteri
     status_batteri += 1.2
-
-    while value:
-        kontroll_tid = datetime.now()
-        status_batteri -= 1.2
-        if status_batteri < 10:
-            print(f"Du har bara {status_batteri:.1f} % kvar")
-        #avsluta = input("Vill du avsluta resan? ")
-        #if avsluta == "J" or "j":
-        #    value=False
-        #else:
-        time.sleep(10)
+    lat = cykel["bike"]["coordinates"]["lat"]
+    long = cykel["bike"]["coordinates"]["long"]
+    uppdaterad_cykel = [
+    {"propName": "battery_status", "value": status_batteri},
+    {"propName": "lat", "value": lat},
+    {"propName": "lat", "value": long}
+    ]
+    print("Lat:",lat)
+    print("Long:",long)
+    vädersträck = ["norr", "söder", "öster", "väster"]
+    riktning = input("I vilken riktning vill du åka? (norr, söder, öster, väster) (Avsluta med q/Q) ")
+    while True:
         if status_batteri < 0.2:
             avsluta_resa_slut()
+        if riktning in vädersträck:
+            print("Du färdas {}".format(riktning))
+            print("Lat:",lat)
+            print("Long:",long)
+            if riktning == "norr":
+                lat += 0.001
+                status_batteri -= 1.2
+                r = requests.patch('http://localhost:1337/bikes/'+bike_id, json =uppdaterad_cykel)
+                print(r)
+                print(status_batteri)
+            elif riktning == "söder":
+                lat -= 0.001
+                status_batteri -= 1.2
+                r = requests.patch('http://localhost:1337/bikes/'+bike_id, json =uppdaterad_cykel)
+                print(r)
+                print(status_batteri)
+            elif riktning == "öster":
+                long += 0.001
+                status_batteri -= 1.2
+                r = requests.patch('http://localhost:1337/bikes/'+bike_id, json =uppdaterad_cykel)
+                print(r)
+                print(status_batteri)
+            elif riktning == "väster":
+                long -= 0.001
+                status_batteri -= 1.2
+                r = requests.patch('http://localhost:1337/bikes/'+bike_id, json =uppdaterad_cykel)
+                print(r)
+                #print(status_batteri)
+            print("Lat:",lat)
+            print("Long:",long)
+            print(status_batteri)
+            riktning = input("I vilken riktning vill du åka? (norr, söder, öster, väster) (Avsluta med q/Q) ")
+            
+        elif "q" == riktning or "Q" == riktning:
+            break
+        else:
+            print("Fel riktning, testa igen")
+            riktning = input("I vilken riktning vill du åka? (norr, söder, öster, väster) (Avsluta med q/Q) ")
+    #kontroll_tid = datetime.now()
+    #status_batteri -= 1.2
+    #if status_batteri < 10:
+    #    print(f"Du har bara {status_batteri:.1f} % kvar")
+    #avsluta = input("Vill du avsluta resan? ")
+    #if avsluta == "J" or "j":
+    #    value=False
+    #else:
+    #time.sleep(10)
+    #if status_batteri < 0.2:
+    #    avsluta_resa_slut()
         
         
     #Skicka batteristatus
@@ -160,6 +210,9 @@ def resa(value = True):
     #Kontrolla balansen
     #Om under 10, skicka varning
     #Om 0, avsluta programmet
+
+def calculate_trip():
+    pass
 
 def avsluta_resa_slut():
     """Används när batteriet eller saldot är 0"""
@@ -184,9 +237,9 @@ if __name__=='__main__':
         elif option == 2:
             travel_kor()
         elif option == 3:
-            resa(True)
+            resa()
         elif option == 4:
-            resa(False)
+            resa()
         elif option == 5:
             print('Avslutar cykelns program')
             exit()
