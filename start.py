@@ -1,4 +1,5 @@
 from decimal import InvalidOperation
+from os import stat
 import bikeclass
 import json
 import time
@@ -6,7 +7,7 @@ import requests
 from geopy import distance
 from datetime import datetime
 import time
-from itertools import cycle
+#from itertools import cycle
 #print(time.time())
 
 #API-länkar
@@ -20,6 +21,7 @@ priser = requests.get(link+"prices").json()
 
 #Kunduppgifter
 global status_batteri
+global balans_konto
 kundens_id = user["user"]["_id"]
 balans_konto = user["user"]["balance"]
 status_batteri =float(cykel["bike"]["battery_status"])
@@ -38,28 +40,40 @@ starttid = ""
 kontroll_tid = ""
 sluttid = ""
 
-#Skapa fil
-try:
-    f = open(bike_id, "x")
-except:
-    f = open(bike_id, "a")
-f.write("User-id: "+user_id+"\n")
-#f.close
+
+
+
+def uppdatera_balans():
+    user = requests.get(link+"users/"+user_id).json()
+    balans_konto = user["user"]["balance"]
+    return balans_konto
+
+def uppdatera_batteri(bike_id):
+    cykel = requests.get(link+"bikes/"+bike_id).json()
+    return float(cykel["bike"]["battery_status"])
 
 def print_menu():
+    #balans_konto = uppdatera_balans()
+    #print(balans_konto)
     """Meny program"""
     print("\n=========== CYKELNS PROGRAM ===========")
     print("\nVälkommen", user["user"]["firstname"], "vad vill du göra?")
-    print("\nDu har ", travel_time(balans_konto, status_batteri, pris_per_minut), "minuter kvar att åka")
+    print("\nDu har ", travel_time(pris_per_minut), "minuter kvar att åka")
+    print("\nNuvarande batterinivå är: {:.0f} %".format(uppdatera_batteri(bike_id)))
     print("\nVad vill du göra?")
     print("1.",bike_status())
-    print("2. Ange var du vill åka (lat/long)")
-    print("3. Starta resa")
-    print("4. Avsluta resa")
-    print("5. Avsluta programmet")
+    print("2. Starta resa")
+    print("3. Avsluta resa")
+    print("4. Avsluta resa & programmet")
 
-def travel_time(balans_konto, status_batteri, pristariff):
+def travel_time(pristariff):
     """Program för uträkningar av batteri, kostnad och balans"""
+    cykel = requests.get(link+"bikes/"+bike_id).json()
+    status_batteri = float(cykel["bike"]["battery_status"])
+    
+    user = requests.get(link+"users/"+user_id).json()
+    balans_konto = user["user"]["balance"]
+
     räckvidd_batteri = int(status_batteri) *1.2
     #räckvidd_batteri = 40.0
     travel_time = balans_konto / pristariff
@@ -93,65 +107,63 @@ def bike_status():
     else:
         return "Något är fel" 
 
-def travel_kor():
-    """Hanterar koordinater och räknar ut sträckor & tidsåtgång"""
-    i = 0
-    #print(stad)
-    while i < stad["count"]:
-        if cykel["bike"]["city_id"] == stad["cities"][i]["_id"]:
-            nuvarande_stad = stad["cities"][i]["name"]
-            f.write("Nuvarande stad: "+ nuvarande_stad+"\n")
-            nuvarande_kord = stad["cities"][i]["coordinates"]
-            nw_lat = stad["cities"][i]["coordinates"]["northwest"]["lat"]
-            nw_long = stad["cities"][i]["coordinates"]["northwest"]["long"]
-            se_lat = stad["cities"][i]["coordinates"]["southeast"]["lat"]
-            se_long = stad["cities"][i]["coordinates"]["southeast"]["long"]
-            #print(stad["cities"][i]["coordinates"]["southeast"])fff
-        i+=1
-    print("\nDina nuvarande koordinater:") 
-    print("Lat:",cykel["bike"]["coordinates"]["lat"])
-    print("Long:",cykel["bike"]["coordinates"]["long"])
-    f.write("Nuvarande koordinater: "+ str(cykel["bike"]["coordinates"]["lat"])+","+str(cykel["bike"]["coordinates"]["long"])+"\n")
-    print("Var vill du åka?")
-    
-    lat = float(input("Lat(ange mellan " +str(nw_lat) + " och "+ str(se_lat)+") "))
-    while lat > nw_lat or lat < se_lat:
-        print("Fel koordinat")
-        lat = float(input("Lat(ange mellan " +str(nw_lat) + " och "+ str(se_lat)+") "))
-    print("Lat satt till:", lat)
-    
-    long = float(input("Long(ange mellan "+ str(se_long) + " och " + str(nw_long)+") "))
-    if long > se_long  or long < nw_long:
-        print("Fel koordinat")
-        long = float(input("Long(ange mellan "+ str(se_long) + " och " + str(nw_long)+") "))
-    else:
-        print("Long satt till:", long)
-    new_location = (lat, long)
-    old_location = (cykel["bike"]["coordinates"]["lat"], cykel["bike"]["coordinates"]["long"])
-    sträcka = distance.distance(new_location, old_location).km
-    print(f"Den inlagda sträcka är {sträcka:.1f} km lång")
-    tidsåtgång = sträcka * pris_per_minut
-    print(f"Beräknas ta ungefär {tidsåtgång:.1f} minuter att åka")
+def starta_resan(start_tid, lat, long):
+    start_tid_fixad =json.dumps(start_tid, indent=4, sort_keys=True, default=str)
+    starta_resa = [
+        {"propName": "user_id", "value": str(user_id)},
+        {"propName": "bike_id", "value": bike_id},
+        {"propName": "start_time", "value": start_tid_fixad},
+        {"propName": "lat", "value": lat},
+        {"propName": "lat", "value": long}
+        ]
+    r = requests.post('http://localhost:1337/trips/', json =starta_resa)
+    fixed = r.json()
+    id_resan = fixed['startedTrip']['_id']
+    #print(id_resan)
+    return id_resan
 
+def stoppa_resa(id_resan, lat, long, pris, slut_tid_fixad):
 
-def resa():
+    hastighet = 15
+    gamla = (lat, long)
+    new_lat = lat + 10
+    new_long = long + 5
+    nya = (new_lat, new_long)
+    sträcka = distance.distance(nya, gamla).km
+    #pris = 56
+    stoppa_resa = [
+        {"propName": "average_speed", "value": hastighet},
+        {"propName": "distance", "value": sträcka},
+        {"propName": "price", "value": pris},
+        {"propName": "stop_time", "value": slut_tid_fixad},
+        {"propName": "lat", "value": new_lat},
+        {"propName": "long", "value": new_long}
+        ]
+    r2 = requests.patch('http://localhost:1337/trips/end/'+id_resan, json =stoppa_resa)
+    print(r2.content)
+
+def resa(balans_konto):
     """För resor"""
-    global kontroll_tid
-    global status_batteri
-    status_batteri += 1.2
+    #global kontroll_tid
+    #global status_batteri
+    #status_batteri += 1.2
+    start_tid = datetime.now()
     lat = cykel["bike"]["coordinates"]["lat"]
     long = cykel["bike"]["coordinates"]["long"]
+    status_batteri =float(cykel["bike"]["battery_status"])
     uppdaterad_cykel = [
-    {"propName": "battery_status", "value": status_batteri},
-    {"propName": "lat", "value": lat},
-    {"propName": "lat", "value": long}
+        {"propName": "battery_status", "value": status_batteri},
+        {"propName": "lat", "value": lat},
+        {"propName": "lat", "value": long}
     ]
     print("Lat:",lat)
     print("Long:",long)
+    id_resa = starta_resan(start_tid,lat,long)
     vädersträck = ["norr", "söder", "öster", "väster"]
     riktning = input("I vilken riktning vill du åka? (norr, söder, öster, väster) (Avsluta med q/Q) ")
+    
     while True:
-        if status_batteri < 0.2:
+        if status_batteri < 0.2 or balans_konto < 0:
             avsluta_resa_slut()
         if riktning in vädersträck:
             print("Du färdas {}".format(riktning))
@@ -187,32 +199,38 @@ def resa():
             riktning = input("I vilken riktning vill du åka? (norr, söder, öster, väster) (Avsluta med q/Q) ")
             
         elif "q" == riktning or "Q" == riktning:
+            slut_tid = datetime.now()
+            start_tid_fixad =json.dumps(start_tid, indent=4, sort_keys=True, default=str)
+            slut_tid_fixad =json.dumps(slut_tid, indent=4, sort_keys=True, default=str)
+            duration = slut_tid-start_tid
+            längd_i_sekunder = duration.total_seconds()
+            längd_i_minuter = round(längd_i_sekunder/60,1)
+            summa = calculate_trip(längd_i_minuter)
+            stoppa_resa(id_resa,lat,long,summa,slut_tid_fixad)
+            print(status_batteri)
+            #print_menu()
             break
         else:
             print("Fel riktning, testa igen")
             riktning = input("I vilken riktning vill du åka? (norr, söder, öster, väster) (Avsluta med q/Q) ")
-    #kontroll_tid = datetime.now()
-    #status_batteri -= 1.2
-    #if status_batteri < 10:
-    #    print(f"Du har bara {status_batteri:.1f} % kvar")
-    #avsluta = input("Vill du avsluta resan? ")
-    #if avsluta == "J" or "j":
-    #    value=False
-    #else:
-    #time.sleep(10)
-    #if status_batteri < 0.2:
-    #    avsluta_resa_slut()
-        
-        
-    #Skicka batteristatus
-    #Skicka hastighet
-    #Kontrollera batteristatus
-    #Kontrolla balansen
-    #Om under 10, skicka varning
-    #Om 0, avsluta programmet
 
-def calculate_trip():
-    pass
+
+def calculate_trip(minuter, plats="none"):
+    """Räkna ut kostnad för användning"""
+    #Kostnadsuppgifter
+    pris_per_minut = priser["prices"][0]["price_per_minute"]
+    start_avgift = priser["prices"][0]["starting_fee"]
+    straffavgift = priser["prices"][0]["penalty_fee"]
+    avdrag_bra_parkering = priser["prices"][0]["discount"]
+    summa = start_avgift
+    summa += pris_per_minut * minuter
+    if plats == "bra":
+        summa -= avdrag_bra_parkering
+    else:
+        summa += straffavgift
+    #print(summa)
+    return summa
+
 
 def avsluta_resa_slut():
     """Används när batteriet eller saldot är 0"""
@@ -221,6 +239,9 @@ def avsluta_resa_slut():
     exit()
 
 if __name__=='__main__':
+    cykel = requests.get(link+"bikes/"+bike_id).json()
+    status_batteri =float(cykel["bike"]["battery_status"])
+    print(status_batteri)
     while(True):
         print_menu()
         option = ''
@@ -235,12 +256,10 @@ if __name__=='__main__':
             #starttid = start_tid()
             print(starttid)
         elif option == 2:
-            travel_kor()
+            resa(balans_konto)
         elif option == 3:
-            resa()
+            resa(balans_konto)
         elif option == 4:
-            resa()
-        elif option == 5:
             print('Avslutar cykelns program')
             exit()
         else:
