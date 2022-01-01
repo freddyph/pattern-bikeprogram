@@ -4,7 +4,7 @@ import random as rand
 from datetime import *
 from funktioner import *
 
-link = "http://localhost:1337/"
+link = "http://localhost:1337/v1/"
 
 def simulera(stad):
     

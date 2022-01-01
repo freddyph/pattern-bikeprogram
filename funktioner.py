@@ -5,7 +5,7 @@ from datetime import *
 import time as t
 from geopy import distance
 
-link = "http://localhost:1337/"
+link = "http://localhost:1337/v1/"
 #Funktioner simulering
 
 def print_menu_simulering():
