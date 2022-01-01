@@ -20,7 +20,7 @@ def skapa_data_personer(stad):
     #print(stad)
     antal = int(input("\nHur många personer vill du skapa? "))
     i = 0
-    while i < antal: 
+    while i < antal:
         förnamn = names.get_first_name()
         efternamn = names.get_last_name()
         email = förnamn + "."+ efternamn +"@gmail.com"
