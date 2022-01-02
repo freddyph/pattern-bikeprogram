@@ -1,11 +1,16 @@
-import requests
-import names
+"""
+Samling av funktioner.
+"""
 import random as rand
-from datetime import *
+from datetime import datetime
 import time as t
 from geopy import distance
+import requests
+import names
 
-link = "http://localhost:1337/v1/"
+LINK = "http://localhost:1337/v1/"
+SUM = []
+
 #Funktioner simulering
 
 def print_menu_simulering():
@@ -17,6 +22,7 @@ def print_menu_simulering():
     print("3. Avsluta programmet")
 
 def skapa_data_personer(stad):
+    """Funktion för att skapa x antal personer"""
     #print(stad)
     antal = int(input("\nHur många personer vill du skapa? "))
     i = 0
@@ -42,28 +48,30 @@ def skapa_data_personer(stad):
             "account_status": account_status,
             "city": stad
         }
-           
-        r = requests.post(link+'users/register', json =skapa_data)
-        
+        response = requests.post(LINK+'users/register', json =skapa_data)
+        SUM.append(response)
         i += 1
+        
+        
     print("\n"+str(antal)+" personer har skapats")
 
 def skapa_data_cyklar(stad):
+    """Funktion för att skapa cyklar i specifik stad"""
     antal = int(input("\nHur många cyklar vill du skapa? "))
     i = 0
-    while i < antal: 
+    while i < antal:
         if stad == "61a76026bb53f131584de9b1":
             lat = round(rand.uniform(56.193013, 56.152144),6)
             long = round(rand.uniform(15.559232, 15.634511),6)
-            
+
         elif stad == "61a7603dbb53f131584de9b3":
             lat = round(rand.uniform(59.343886, 59.310522),6)
             long = round(rand.uniform(18.026826, 18.099825),6)
-            
+
         elif stad == "61a8fd85ea20b50150945887":
             lat = round(rand.uniform(59.390921, 59.364795),6)
             long = round(rand.uniform(13.466531, 13.541185),6)
-            
+
         else:
             print("Felaktigt stadsid")
 
@@ -73,15 +81,15 @@ def skapa_data_cyklar(stad):
             "battery_status": "100",
             "lat": lat,
             "long": long
-            
-        }   
-        r = requests.post(link+'bikes', json=skapa_data)
-        #print(r.content)
-        #print(skapa_data)
+
+        }
+        response = requests.post(LINK+'bikes', json=skapa_data)
+        SUM.append(response)
         i += 1
     print("\n"+str(antal)+" cyklar har skapats")
 
 def välja_stad():
+    """Enkel funktion för att välja stad."""
     print("Du kan välja mellan följande städer:\n")
     print("1. Karlskrona")
     print("2. Stockholm")
@@ -95,6 +103,7 @@ def välja_stad():
         return "61a8fd85ea20b50150945887"
 
 def starta_resan(user_id,bike_id,lat,long):
+    """Starta resa"""
     starta_resa = {
         "user_id": user_id,
         "bike_id": bike_id,
@@ -104,41 +113,50 @@ def starta_resan(user_id,bike_id,lat,long):
         }
 
         }
-    
-    r = requests.post(link+'trips/', json =starta_resa)
-    fixed = r.json()
+
+    response = requests.post(LINK+'trips/', json =starta_resa)
+    fixed = response.json()
     id_resan = fixed['startedTrip']['_id']
     #print(id_resan)
     return id_resan
 
 def avsluta_resa(id_resan,lat,long,summa):
-    
-    avsluta_resa ={
+    """Avsluta en resa"""
+    avsluta_resan ={
         "stop_coordinates": {
             "lat": lat,
             "long": long
         },
         "price": summa
-        
+
         }
-    print(avsluta_resa)
-    r = requests.patch(link+'trips/end/'+id_resan, json =avsluta_resa)
-    print("Avsluta resan: ",r)
+    print(avsluta_resan)
+    response = requests.patch(LINK+'trips/end/'+id_resan, json =avsluta_resan)
+    SUM.append(response)
 
 def kontroll_plats(lat, long, stad):
-    stad = link+"cities/stations/"+stad
+    """Kontrollera om en plats är laddstation eller parkering"""
+    stad = LINK+"cities/stations/"+stad
     parkeringar = requests.get(stad).json()
     i = 0
     while i < len(parkeringar["stations"]["charge_stations"]):
-        is_between_lat = parkeringar["stations"]["charge_stations"][i]["coordinates"]["southeast"]["lat"] <= lat <= parkeringar["stations"]["charge_stations"][i]["coordinates"]["northwest"]["lat"]
-        is_between_long = parkeringar["stations"]["charge_stations"][i]["coordinates"]["northwest"]["long"] <= long <= parkeringar["stations"]["charge_stations"][i]["coordinates"]["southeast"]["long"]
+        se_lat = parkeringar["stations"]["charge_stations"][i]["coordinates"]["southeast"]["lat"]
+        nw_lat = parkeringar["stations"]["charge_stations"][i]["coordinates"]["northwest"]["lat"]
+        is_between_lat = se_lat <= lat <= nw_lat
+        nw_long = parkeringar["stations"]["charge_stations"][i]["coordinates"]["northwest"]["long"]
+        se_long = parkeringar["stations"]["charge_stations"][i]["coordinates"]["southeast"]["long"]
+        is_between_long = nw_long <= long <= se_long
         if is_between_lat and is_between_long:
             return "bra"
         i+=1
     i = 0
     while i < len(parkeringar["stations"]["parking_stations"]):
-        is_between_lat = parkeringar["stations"]["parking_stations"][i]["coordinates"]["southeast"]["lat"] <= lat <= parkeringar["stations"]["parking_stations"][i]["coordinates"]["northwest"]["lat"]
-        is_between_long = parkeringar["stations"]["parking_stations"][i]["coordinates"]["northwest"]["long"] <= long <= parkeringar["stations"]["parking_stations"][i]["coordinates"]["southeast"]["long"]
+        se_lat = parkeringar["stations"]["parking_stations"][i]["coordinates"]["southeast"]["lat"]
+        nw_lat = parkeringar["stations"]["parking_stations"][i]["coordinates"]["northwest"]["lat"]
+        is_between_lat =  se_lat <= lat <= nw_lat
+        nw_long = parkeringar["stations"]["parking_stations"][i]["coordinates"]["northwest"]["long"]
+        se_long = parkeringar["stations"]["parking_stations"][i]["coordinates"]["southeast"]["long"]
+        is_between_long =  nw_long <= long <= se_long
         if is_between_lat and is_between_long:
             return "bra"
         i+=1
@@ -146,7 +164,7 @@ def kontroll_plats(lat, long, stad):
 def calculate_trip(minuter, plats="none"):
     """Räkna ut kostnad för användning"""
     #Kostnadsuppgifter
-    priser = requests.get(link+"prices").json()
+    priser = requests.get(LINK+"prices").json()
     pris_per_minut = priser["prices"][0]["price_per_minute"]
     start_avgift = priser["prices"][0]["starting_fee"]
     straffavgift = priser["prices"][0]["penalty_fee"]
@@ -160,31 +178,34 @@ def calculate_trip(minuter, plats="none"):
     return summa
 
 def uppdatera_cykel(status_batteri,lat,long,bike_id):
+    """Uppdatera batteri och position"""
     uppdatera_cykeln = [
         {"propName": "battery_status", "value": status_batteri},
         {"propName": "coordinates", "value": {"lat":lat, "long": long}}
     ]
-    r = requests.patch(link+'bikes/'+bike_id, json =uppdatera_cykeln)
+    response = requests.patch(LINK+'bikes/'+bike_id, json =uppdatera_cykeln)
+    SUM.append(response)
 
 def hämta_lat(bike_id):
-    cykel = requests.get(link+"bikes/"+bike_id).json() 
+    """Hämta latitud"""
+    cykel = requests.get(LINK+"bikes/"+bike_id).json()
     lat = cykel["bike"]["coordinates"]["lat"]
     return lat
 
 def hämta_long(bike_id):
-    cykel = requests.get(link+"bikes/"+bike_id).json() 
+    """Hämta longitud"""
+    cykel = requests.get(LINK+"bikes/"+bike_id).json()
     long = cykel["bike"]["coordinates"]["long"]
     return long
 
 def slumpa_riktning(lat,long,bike_id):
-    cykel = requests.get(link+'bikes/'+bike_id).json()
+    """Slumpa riktning på cykeln"""
+    cykel = requests.get(LINK+'bikes/'+bike_id).json()
     status_batteri =float(cykel["bike"]["battery_status"])
     antal = rand.randint(1,11)
     i = 0
     while i < antal:
-    
         slumpat = rand.randint(0,3)
-   
         if slumpat == 0:
             lat=hämta_lat(bike_id)
             long=hämta_long(bike_id)
@@ -193,7 +214,6 @@ def slumpa_riktning(lat,long,bike_id):
             status_batteri -= 1.2
             t.sleep(1)
             uppdatera_cykel(status_batteri,lat,long, bike_id)
-
         elif slumpat == 1:
             lat=hämta_lat(bike_id)
             long=hämta_long(bike_id)
@@ -202,7 +222,6 @@ def slumpa_riktning(lat,long,bike_id):
             status_batteri -= 1.2
             t.sleep(1)
             uppdatera_cykel(status_batteri,lat,long, bike_id)
-            
         elif slumpat == 2:
             lat=hämta_lat(bike_id)
             long=hämta_long(bike_id)
@@ -211,7 +230,6 @@ def slumpa_riktning(lat,long,bike_id):
             status_batteri -= 1.2
             t.sleep(1)
             uppdatera_cykel(status_batteri,lat,long, bike_id)
-
         elif slumpat == 3:
             lat=hämta_lat(bike_id)
             long=hämta_long(bike_id)
@@ -221,31 +239,34 @@ def slumpa_riktning(lat,long,bike_id):
             t.sleep(1)
             uppdatera_cykel(status_batteri,lat,long, bike_id)
         i += 1
+
 def räkna_minuter(id_resan):
     """Räknar ut hur många minuter en resa pågått"""
-    r = requests.get(link+'trips/'+id_resan).json()
-    start_tid = r["trip"]["start_time"]
+    response = requests.get(LINK+'trips/'+id_resan).json()
+    start_tid = response["trip"]["start_time"]
     start = datetime.strptime(start_tid, '%Y-%m-%dT%H:%M:%S.%fZ')
     try:
-        stop_tid = r["trip"]["stop_time"]
+        stop_tid = response["trip"]["stop_time"]
         stop = datetime.strptime(stop_tid, '%Y-%m-%dT%H:%M:%S.%fZ')
-    except:
+    except: # pylint: disable=bare-except
         stop_tid = datetime.now()
     duration = stop-start
     längd_i_sekunder = duration.total_seconds()
     längd_i_minuter = round(längd_i_sekunder/60,0)
     längd_i_minuter = int(längd_i_minuter)
     return längd_i_minuter
-    
+
 def räkna_och_sätt_sträcka(id_resan):
     """Räknar ut sträckan"""
-    r = requests.get(link+'trips/'+id_resan).json()
-    print(r["trip"]["start_coordinates"])
-    start_koordinater = (r["trip"]["start_coordinates"]["lat"],r["trip"]["start_coordinates"]["long"])
+    response = requests.get(LINK+'trips/'+id_resan).json()
+    print(response["trip"]["start_coordinates"])
+    start_lat = response["trip"]["start_coordinates"]["lat"]
+    start_long = response["trip"]["start_coordinates"]["long"]
+    start_koordinater = (start_lat,start_long)
     print(start_koordinater)
-    print(r["trip"]["bike_id"])
-    bike_id = r["trip"]["bike_id"]
-    bike = requests.get(link+'bikes/'+bike_id).json()
+    print(response["trip"]["bike_id"])
+    bike_id = response["trip"]["bike_id"]
+    bike = requests.get(LINK+'bikes/'+bike_id).json()
     print(bike["bike"]["coordinates"])
     stop_koordinater = (bike["bike"]["coordinates"]["lat"],bike["bike"]["coordinates"]["long"])
     print(stop_koordinater)
@@ -262,17 +283,17 @@ def räkna_och_sätt_sträcka(id_resan):
     uppdatera_sträckan = [
         {"propName": "distance", "value": ackumulerad_sträcka}
     ]
-    r = requests.patch('http://localhost:1337/trips/'+id_resan, json =uppdatera_sträckan)
-    fixed = r.json()
-    print(r)
+    response = requests.patch('http://localhost:1337/trips/'+id_resan, json =uppdatera_sträckan)
+    SUM.append(response)
     #return sträcka
 
 ###Uppdatera sträckan, så det blir det den totala sträckan, inte sträckan
 ###på servern.
 def räkna_och_sätt_medelhastighet(id_resan, minuter):
-    r = requests.get(link+'trips/'+id_resan).json()
-    print(r["trip"]["distance"])
-    distans_i_km = r["trip"]["distance"]/1000
+    """Enligt funktionsnamnet."""
+    response = requests.get(LINK+'trips/'+id_resan).json()
+    print(response["trip"]["distance"])
+    distans_i_km = response["trip"]["distance"]/1000
     print(distans_i_km)
     minuter_av_en_timme = minuter/60
     print(minuter_av_en_timme)
@@ -281,7 +302,8 @@ def räkna_och_sätt_medelhastighet(id_resan, minuter):
 
 #Slumpa en person av alla
 def välj_en_person():
-    users = requests.get(link+"users/").json()
+    """Slumpa en person baserat på antal i databasen"""
+    users = requests.get(LINK+"users/").json()
     antal_användare =users["count"]
     antal_användare -= 1
     utvald = rand.randint(0,antal_användare)
@@ -289,26 +311,20 @@ def välj_en_person():
 
 #Slumpa en cykel i en specifik stad
 def välj_en_cykel_i_stad(stads_lista):
+    """Slumpa en cykel baserat på stad"""
     antal = len(stads_lista)
     antal -= 1
     utvald = rand.randint(0,antal)
     return stads_lista[utvald]["_id"]
 
 def skapa_lista_stad(stad):
-    bikes = requests.get(link+"bikes/").json()
+    """Skapa lista på cyklar för en specifik stad"""
+    bikes = requests.get(LINK+"bikes/").json()
     stads_lista = []
-    for x in bikes["bikes"]:
+    for bike in bikes["bikes"]:
         try:
-            if x["city_id"] == stad:
-                stads_lista.append(x)
-        except:
+            if bike["city_id"] == stad:
+                stads_lista.append(bike)
+        except: # pylint: disable=bare-except
             pass
     return stads_lista
-
-#hämta_lat("61a8aec803d845a108c53774")
-#räkna_och_sätt_sträcka("61d055a18325ce5f54391ac6")
-#minuter = räkna_minuter("61d055a18325ce5f54391ac6")
-#räkna_och_sätt_medelhastighet("61a8ce5cd84acdc3bb04d155",minuter)
-#välj_en_person()
-#stads_lista =skapa_lista_stad("61a76026bb53f131584de9b1")
-#välj_en_cykel_i_stad(stads_lista)
