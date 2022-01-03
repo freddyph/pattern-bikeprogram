@@ -7,6 +7,3 @@ by the continuous integration server. The second badge shows the percentage of c
 calculated using PHPUnit.
 
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/freddyph/pattern-bikeprogram/badges/quality-score.png?b=main)](https://scrutinizer-ci.com/g/freddyph/pattern-bikeprogram/?branch=main)
-[![Scrutinizer Quality Score](https://scrutinizer-ci.com/g/freddyph/pattern-bikeprogram/badges/badges/quality-score.png?s=4023c984fc1163a44f4220cd7d57406643ced9f2)](https://scrutinizer-ci.com/g/freddyph/pattern-bikeprogram/)
-
-[![Code Coverage](https://scrutinizer-ci.com/g/freddyph/pattern-bikeprogram/badges/badges/coverage.png?s=531ebd5f55891dfc816ace082531adfb24d194e9)](https://scrutinizer-ci.com/g/freddyph/pattern-bikeprogram/badges/)
