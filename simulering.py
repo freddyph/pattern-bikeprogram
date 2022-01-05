@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Simuleringsprogram för skapandet av personer, cyklar och simulera körning.
 """
@@ -5,13 +6,12 @@ import requests
 import funktioner
 
 LINK = "http://localhost:1337/v1/"
+SUM = []
+simuleringar = int(input("Hur många simuleringar vill du göra? "))
 
-#antal_simuleringar = int(input("Hur många simuleringar vill du göra? "))
-    
 def simulera(stad,antal_simuleringar):
     """Simulering i specifik stad samt antal simuleringar som ska köras"""
     i = 1
-
     while i < antal_simuleringar+1:
         #Välj person
         person_id = funktioner.välj_en_person()
@@ -20,6 +20,9 @@ def simulera(stad,antal_simuleringar):
         #Skapa lista över staden
         lista_stad =funktioner.skapa_lista_stad(stad)
 
+        #Hämta parkeringar i staden
+        kontroller_stad = LINK+"cities/stations/"+stad
+        parkeringar = requests.get(kontroller_stad).json()
         #Välj cykel
         cykel_id = funktioner.välj_en_cykel_i_stad(lista_stad)
 
@@ -43,20 +46,33 @@ def simulera(stad,antal_simuleringar):
             print("Start-coordinater: ", lat, long)
             #Starta resan
             id_resan = funktioner.starta_resan(person_id,cykel_id,lat,long)
-
+            print(id_resan)
+            response_resa = requests.get(LINK+'trips/'+id_resan).json()
+            priser = requests.get(LINK+"prices").json()
             #Hämta distans-start, för senare beräkningar
 
             #Slumpa riktning
-            funktioner.slumpa_riktning(lat, long, cykel_id)
+            funktioner.slumpa_riktning(
+            lat,
+            long,
+            person_id,
+            cykel_id,
+            balans_konto,
+            id_resan,
+            response_resa,
+            priser)
             #Kontrollera cykelns status, om illa avsluta direkt
 
             #Avsluta resa
             cykel = requests.get(LINK+'bikes/'+cykel_id).json()
             lat = cykel["bike"]["coordinates"]["lat"]
             long = cykel["bike"]["coordinates"]["long"]
-            plats = funktioner.kontroll_plats(lat,long,stad)
-            summa = funktioner.calculate_trip(1, plats)
-            funktioner.avsluta_resa(id_resan,lat,long,summa)
+            print("lat inför avslutning:",lat)
+            parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
+            laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
+            summa = funktioner.calculate_trip(priser,1, parkering, laddning)
+            SUM.append(summa)
+            funktioner.avsluta_resa(id_resan,lat,long)
         except: # pylint: disable=bare-except
             pass
         print("Simulering",i,"klar")
@@ -77,7 +93,7 @@ if __name__=='__main__':
             funktioner.skapa_data_cyklar(STAD)
         elif OPTION == 2:
             STAD = funktioner.välja_stad()
-            simulera(STAD)
+            simulera(STAD, simuleringar)
         elif OPTION == 3:
             print('Avslutar simuleringsprogrammet')
             exit()

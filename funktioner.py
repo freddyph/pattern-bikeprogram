@@ -1,17 +1,16 @@
+#!/usr/bin/env python3
 """
 Samling av funktioner.
 """
 import random as rand
 from datetime import datetime
 import time as t
-from geopy import distance
+#from geopy import distance
 import requests
 import names
 
 LINK = "http://localhost:1337/v1/"
 SUM = []
-
-#Funktioner simulering
 
 def print_menu_simulering():
     """Meny program"""
@@ -21,9 +20,16 @@ def print_menu_simulering():
     print("2. Simulera")
     print("3. Avsluta programmet")
 
+def print_menu():
+    """Meny program"""
+    print("\n=========== CYKELNS PROGRAM ===========")
+    print("\nVälkommen, vad vill du göra?")
+    print("\nVad vill du göra?")
+    print("1. Starta resa")
+    print("2. Avsluta resa & programmet")
+
 def skapa_data_personer(stad):
     """Funktion för att skapa x antal personer"""
-    #print(stad)
     antal = int(input("\nHur många personer vill du skapa? "))
     i = 0
     while i < antal:
@@ -51,8 +57,7 @@ def skapa_data_personer(stad):
         response = requests.post(LINK+'users/register', json =skapa_data)
         SUM.append(response)
         i += 1
-        
-        
+
     print("\n"+str(antal)+" personer har skapats")
 
 def skapa_data_cyklar(stad):
@@ -111,34 +116,27 @@ def starta_resan(user_id,bike_id,lat,long):
             "lat":lat,
             "long":long
         }
-
-        }
-
-    response = requests.post(LINK+'trips/', json =starta_resa)
-    fixed = response.json()
-    id_resan = fixed['startedTrip']['_id']
-    #print(id_resan)
+    }
+    resa = requests.post(LINK+'trips/', json =starta_resa).json()
+    id_resan = resa['startedTrip']['_id']
     return id_resan
 
-def avsluta_resa(id_resan,lat,long,summa):
+def avsluta_resa(id_resan,lat,long):
     """Avsluta en resa"""
     avsluta_resan ={
         "stop_coordinates": {
             "lat": lat,
             "long": long
-        },
-        "price": summa
-
         }
+    }
     print(avsluta_resan)
     response = requests.patch(LINK+'trips/end/'+id_resan, json =avsluta_resan)
     SUM.append(response)
 
-def kontroll_plats(lat, long, stad):
-    """Kontrollera om en plats är laddstation eller parkering"""
-    stad = LINK+"cities/stations/"+stad
-    parkeringar = requests.get(stad).json()
+def kontroll_plats_laddstation(lat, long, parkeringar):
+    """Kontrollera om en plats är en laddstation"""
     i = 0
+    print()
     while i < len(parkeringar["stations"]["charge_stations"]):
         se_lat = parkeringar["stations"]["charge_stations"][i]["coordinates"]["southeast"]["lat"]
         nw_lat = parkeringar["stations"]["charge_stations"][i]["coordinates"]["northwest"]["lat"]
@@ -147,8 +145,11 @@ def kontroll_plats(lat, long, stad):
         se_long = parkeringar["stations"]["charge_stations"][i]["coordinates"]["southeast"]["long"]
         is_between_long = nw_long <= long <= se_long
         if is_between_lat and is_between_long:
-            return "bra"
+            return parkeringar["stations"]["charge_stations"][i]["_id"]
         i+=1
+
+def kontroll_plats_parkering(lat, long, parkeringar):
+    """Kontrollera om en plats är en parkering"""
     i = 0
     while i < len(parkeringar["stations"]["parking_stations"]):
         se_lat = parkeringar["stations"]["parking_stations"][i]["coordinates"]["southeast"]["lat"]
@@ -158,30 +159,37 @@ def kontroll_plats(lat, long, stad):
         se_long = parkeringar["stations"]["parking_stations"][i]["coordinates"]["southeast"]["long"]
         is_between_long =  nw_long <= long <= se_long
         if is_between_lat and is_between_long:
-            return "bra"
+            return parkeringar["stations"]["parking_stations"][i]["_id"]
         i+=1
 
-def calculate_trip(minuter, plats="none"):
+def kontroll_tid_batteri_saldo(tid,batteri,saldo,id_resan,lat,long):
+    """Kontroll för att ev avsluta resa"""
+    if tid < 0 or batteri < 0 or saldo < 0:
+        avsluta_resa(id_resan,lat,long)
+
+def calculate_trip(priser, minuter, parkering=None, laddning=None):
     """Räkna ut kostnad för användning"""
-    #Kostnadsuppgifter
-    priser = requests.get(LINK+"prices").json()
     pris_per_minut = priser["prices"][0]["price_per_minute"]
     start_avgift = priser["prices"][0]["starting_fee"]
     straffavgift = priser["prices"][0]["penalty_fee"]
     avdrag_bra_parkering = priser["prices"][0]["discount"]
     summa = start_avgift
     summa += pris_per_minut * minuter
-    if plats == "bra":
+    if parkering is not None or laddning is not None:
         summa -= avdrag_bra_parkering
     else:
         summa += straffavgift
     return summa
 
-def uppdatera_cykel(status_batteri,lat,long,bike_id):
+def uppdatera_cykel(status_batteri,lat,long,bike_id,hastighet,distans,pris):
     """Uppdatera batteri och position"""
     uppdatera_cykeln = [
         {"propName": "battery_status", "value": status_batteri},
-        {"propName": "coordinates", "value": {"lat":lat, "long": long}}
+        {"propName": "coordinates", "value": {"lat":lat, "long": long}},
+        {"propName": "latest_trip", "value":
+        {"average_speed":hastighet,
+        "distance": distans,
+        "price": pris}}
     ]
     response = requests.patch(LINK+'bikes/'+bike_id, json =uppdatera_cykeln)
     SUM.append(response)
@@ -192,115 +200,120 @@ def hämta_lat(bike_id):
     lat = cykel["bike"]["coordinates"]["lat"]
     return lat
 
+
 def hämta_long(bike_id):
     """Hämta longitud"""
     cykel = requests.get(LINK+"bikes/"+bike_id).json()
     long = cykel["bike"]["coordinates"]["long"]
     return long
 
-def slumpa_riktning(lat,long,bike_id):
+def travel_time(pristariff,cykel_id,person_id):
+    """Program för uträkningar av batteri, kostnad och balans"""
+    cykel = requests.get(LINK+"bikes/"+cykel_id).json()
+    status_batteri = float(cykel["bike"]["battery_status"])
+
+    user = requests.get(LINK+"users/"+person_id).json()
+    balans_konto = user["user"]["balance"]
+
+    räckvidd_batteri = int(status_batteri) *1.2
+    #räckvidd_batteri = 40.0
+    rese_tid = balans_konto / pristariff
+    if räckvidd_batteri > rese_tid:
+        return rese_tid
+    else:
+        return räckvidd_batteri
+
+def slumpa_riktning(lat,long,person_id,bike_id,balans_konto,id_resan, response_resa, priser):
     """Slumpa riktning på cykeln"""
     cykel = requests.get(LINK+'bikes/'+bike_id).json()
     status_batteri =float(cykel["bike"]["battery_status"])
+    stad = cykel["bike"]["city_id"]
+    pris_per_minut = priser["prices"][0]["price_per_minute"]
     antal = rand.randint(1,11)
+    lat=hämta_lat(bike_id)
+    long=hämta_long(bike_id)
+    sträcka = 0
+    tid = travel_time(pris_per_minut,bike_id,person_id)
     i = 0
     while i < antal:
         slumpat = rand.randint(0,3)
         if slumpat == 0:
-            lat=hämta_lat(bike_id)
-            long=hämta_long(bike_id)
             lat += 0.001
             lat = round(lat,6)
+            lat = kontrollera_lat(lat,stad)
             status_batteri -= 1.2
+            sträcka += 57
+            minuter =räkna_minuter(response_resa)
+            hastighet = räkna_och_sätt_medelhastighet(sträcka,minuter)
+            pris = calculate_trip(priser, 1)
+            kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
             t.sleep(1)
-            uppdatera_cykel(status_batteri,lat,long, bike_id)
+            uppdatera_cykel(status_batteri,lat,long, bike_id, hastighet, sträcka, pris)
         elif slumpat == 1:
-            lat=hämta_lat(bike_id)
-            long=hämta_long(bike_id)
             lat -= 0.001
             lat = round(lat,6)
+            lat = kontrollera_lat(lat,stad)
             status_batteri -= 1.2
+            sträcka += 57
+            minuter =räkna_minuter(response_resa)
+            hastighet = räkna_och_sätt_medelhastighet(sträcka,minuter)
+            pris = calculate_trip(priser, 1)
+            kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
             t.sleep(1)
-            uppdatera_cykel(status_batteri,lat,long, bike_id)
+            uppdatera_cykel(status_batteri,lat,long, bike_id, hastighet, sträcka, pris)
         elif slumpat == 2:
-            lat=hämta_lat(bike_id)
-            long=hämta_long(bike_id)
             long -= 0.001
             long = round(long,6)
+            long = kontrollera_long(long,stad)
             status_batteri -= 1.2
+            sträcka += 57
+            minuter =räkna_minuter(response_resa)
+            hastighet = räkna_och_sätt_medelhastighet(sträcka,minuter)
+            pris = calculate_trip(priser, 1)
+            kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
             t.sleep(1)
-            uppdatera_cykel(status_batteri,lat,long, bike_id)
+            uppdatera_cykel(status_batteri,lat,long, bike_id, hastighet, sträcka, pris)
         elif slumpat == 3:
-            lat=hämta_lat(bike_id)
-            long=hämta_long(bike_id)
             long += 0.001
             long = round(long,6)
+            long = kontrollera_long(long,stad)
             status_batteri -= 1.2
+            sträcka += 57
+            minuter =räkna_minuter(response_resa)
+            hastighet = räkna_och_sätt_medelhastighet(sträcka,minuter)
+            pris = calculate_trip(priser, 1)
+            kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
             t.sleep(1)
-            uppdatera_cykel(status_batteri,lat,long, bike_id)
+            uppdatera_cykel(status_batteri,lat,long, bike_id, hastighet, sträcka, pris)
         i += 1
 
-def räkna_minuter(id_resan):
+
+
+def räkna_minuter(response_resa):
     """Räknar ut hur många minuter en resa pågått"""
-    response = requests.get(LINK+'trips/'+id_resan).json()
-    start_tid = response["trip"]["start_time"]
+    start_tid = response_resa["trip"]["start_time"]
     start = datetime.strptime(start_tid, '%Y-%m-%dT%H:%M:%S.%fZ')
     try:
-        stop_tid = response["trip"]["stop_time"]
+        stop_tid = response_resa["trip"]["stop_time"]
         stop = datetime.strptime(stop_tid, '%Y-%m-%dT%H:%M:%S.%fZ')
+        duration = stop-start
     except: # pylint: disable=bare-except
         stop_tid = datetime.now()
-    duration = stop-start
+        duration = stop_tid-start
     längd_i_sekunder = duration.total_seconds()
-    längd_i_minuter = round(längd_i_sekunder/60,0)
+    längd_i_minuter = round(längd_i_sekunder/60,0)-60
     längd_i_minuter = int(längd_i_minuter)
+    if längd_i_minuter < 1:
+        längd_i_minuter = 1
     return längd_i_minuter
 
-def räkna_och_sätt_sträcka(id_resan):
-    """Räknar ut sträckan"""
-    response = requests.get(LINK+'trips/'+id_resan).json()
-    print(response["trip"]["start_coordinates"])
-    start_lat = response["trip"]["start_coordinates"]["lat"]
-    start_long = response["trip"]["start_coordinates"]["long"]
-    start_koordinater = (start_lat,start_long)
-    print(start_koordinater)
-    print(response["trip"]["bike_id"])
-    bike_id = response["trip"]["bike_id"]
-    bike = requests.get(LINK+'bikes/'+bike_id).json()
-    print(bike["bike"]["coordinates"])
-    stop_koordinater = (bike["bike"]["coordinates"]["lat"],bike["bike"]["coordinates"]["long"])
-    print(stop_koordinater)
-    sträcka = distance.distance(stop_koordinater, start_koordinater).km
-    print(f"Den inlagda sträckan är {sträcka:.1f} km lång")
-    sträcka = int(round(sträcka * 1000,0))
-    print(f"Den inlagda sträckan är {sträcka} m lång")
-    #print(bike["bike"]["latest_trip"]["distance"])
-    gammal_sträcka = bike["bike"]["latest_trip"]["distance"]
-    print(gammal_sträcka)
-
-    ackumulerad_sträcka = sträcka + gammal_sträcka
-    print(ackumulerad_sträcka)
-    uppdatera_sträckan = [
-        {"propName": "distance", "value": ackumulerad_sträcka}
-    ]
-    response = requests.patch('http://localhost:1337/trips/'+id_resan, json =uppdatera_sträckan)
-    SUM.append(response)
-    #return sträcka
-
-###Uppdatera sträckan, så det blir det den totala sträckan, inte sträckan
-###på servern.
-def räkna_och_sätt_medelhastighet(id_resan, minuter):
+def räkna_och_sätt_medelhastighet(sträcka, minuter):
     """Enligt funktionsnamnet."""
-    response = requests.get(LINK+'trips/'+id_resan).json()
-    print(response["trip"]["distance"])
-    distans_i_km = response["trip"]["distance"]/1000
-    print(distans_i_km)
+    distans_i_km = sträcka/1000
     minuter_av_en_timme = minuter/60
-    print(minuter_av_en_timme)
     km_per_timme = distans_i_km / minuter_av_en_timme
-    print(km_per_timme)
+    return km_per_timme
 
-#Slumpa en person av alla
 def välj_en_person():
     """Slumpa en person baserat på antal i databasen"""
     users = requests.get(LINK+"users/").json()
@@ -309,7 +322,6 @@ def välj_en_person():
     utvald = rand.randint(0,antal_användare)
     return users["users"][utvald]["_id"]
 
-#Slumpa en cykel i en specifik stad
 def välj_en_cykel_i_stad(stads_lista):
     """Slumpa en cykel baserat på stad"""
     antal = len(stads_lista)
@@ -328,3 +340,63 @@ def skapa_lista_stad(stad):
         except: # pylint: disable=bare-except
             pass
     return stads_lista
+
+def kontrollera_lat(lat, stad):
+    """Kontroll av latitud i stad"""
+    if stad == "61a76026bb53f131584de9b1":
+        se_lat = 56.193013
+        nw_lat = 56.152144
+        if lat >= se_lat:
+            return se_lat
+        elif lat <= nw_lat:
+            return nw_lat
+        else:
+            return lat
+    elif stad == "61a7603dbb53f131584de9b3":
+        se_lat = 59.343886
+        nw_lat = 59.310522
+        if lat >= se_lat:
+            return se_lat
+        elif lat <= nw_lat:
+            return nw_lat
+        else:
+            return lat
+    elif stad == "61a8fd85ea20b50150945887":
+        se_lat = 59.390921
+        nw_lat = 59.364795
+        if lat >= se_lat:
+            return se_lat
+        elif lat <= nw_lat:
+            return nw_lat
+        else:
+            return lat
+
+def kontrollera_long(long, stad):
+    """Kontroll av longitud i stad"""
+    if stad == "61a76026bb53f131584de9b1":
+        se_long = 15.634511
+        nw_long = 15.559232
+        if long >= se_long:
+            return se_long
+        elif long <= nw_long:
+            return nw_long
+        else:
+            return long
+    elif stad == "61a7603dbb53f131584de9b3":
+        se_long = 18.099825
+        nw_long = 18.026826
+        if long >= se_long:
+            return se_long
+        elif long <= nw_long:
+            return nw_long
+        else:
+            return long
+    elif stad == "61a8fd85ea20b50150945887":
+        se_long = 13.541185
+        nw_long = 13.466531
+        if long >= se_long:
+            return se_long
+        elif long <= nw_long:
+            return nw_long
+        else:
+            return long
