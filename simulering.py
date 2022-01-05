@@ -2,17 +2,30 @@
 """
 Simuleringsprogram för skapandet av personer, cyklar och simulera körning.
 """
+import concurrent.futures
 import requests
 import funktioner
 
 LINK = "http://localhost:1337/v1/"
 SUM = []
-simuleringar = int(input("Hur många simuleringar vill du göra? "))
+
+#simuleringar = int(input("Hur många simuleringar vill du göra? "))
+
+def starta_simulering(job):
+    """Simulering per jobb"""
+    print(f"--- Starta simulering nr {job[0]} ----")
+    simulera(job[1], 1)
+    print(f"--- Simulering nr {job[0]} avslutad ----")
+
+def start_simulations(jobb):
+    """Användning av concurrent futures"""
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        executor.map(starta_simulering, jobb)
 
 def simulera(stad,antal_simuleringar):
     """Simulering i specifik stad samt antal simuleringar som ska köras"""
-    i = 1
-    while i < antal_simuleringar+1:
+    j = 1
+    while j < antal_simuleringar+1:
         #Välj person
         person_id = funktioner.välj_en_person()
         person = requests.get(LINK+"users/"+person_id).json()
@@ -23,6 +36,7 @@ def simulera(stad,antal_simuleringar):
         #Hämta parkeringar i staden
         kontroller_stad = LINK+"cities/stations/"+stad
         parkeringar = requests.get(kontroller_stad).json()
+
         #Välj cykel
         cykel_id = funktioner.välj_en_cykel_i_stad(lista_stad)
 
@@ -41,42 +55,44 @@ def simulera(stad,antal_simuleringar):
 
             #Sätt lat och long
 
-            lat = cykel["bike"]["coordinates"]["lat"]
-            long = cykel["bike"]["coordinates"]["long"]
-            print("Start-coordinater: ", lat, long)
-            #Starta resan
-            id_resan = funktioner.starta_resan(person_id,cykel_id,lat,long)
-            print(id_resan)
-            response_resa = requests.get(LINK+'trips/'+id_resan).json()
-            priser = requests.get(LINK+"prices").json()
-            #Hämta distans-start, för senare beräkningar
+                lat = cykel["bike"]["coordinates"]["lat"]
+                long = cykel["bike"]["coordinates"]["long"]
+                parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
+                laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
+                print("Start-coordinater: ", lat, long)
+                #Starta resan
+                id_resan = funktioner.starta_resan(person_id,cykel_id,lat,long)
+                print(id_resan)
+                response_resa = requests.get(LINK+'trips/'+id_resan).json()
+                priser = requests.get(LINK+"prices").json()
 
-            #Slumpa riktning
-            funktioner.slumpa_riktning(
-            lat,
-            long,
-            person_id,
-            cykel_id,
-            balans_konto,
-            id_resan,
-            response_resa,
-            priser)
-            #Kontrollera cykelns status, om illa avsluta direkt
+                #Slumpa riktning
+                funktioner.slumpa_riktning(
+                person_id,
+                cykel_id,
+                balans_konto,
+                id_resan,
+                response_resa,
+                priser,
+                parkeringar,
+                parkering,
+                laddning)
+                #Kontrollera cykelns status, om illa avsluta direkt
 
-            #Avsluta resa
-            cykel = requests.get(LINK+'bikes/'+cykel_id).json()
-            lat = cykel["bike"]["coordinates"]["lat"]
-            long = cykel["bike"]["coordinates"]["long"]
-            print("lat inför avslutning:",lat)
-            parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
-            laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
-            summa = funktioner.calculate_trip(priser,1, parkering, laddning)
-            SUM.append(summa)
-            funktioner.avsluta_resa(id_resan,lat,long)
+                #Avsluta resa
+                cykel = requests.get(LINK+'bikes/'+cykel_id).json()
+                lat = cykel["bike"]["coordinates"]["lat"]
+                long = cykel["bike"]["coordinates"]["long"]
+                print("lat inför avslutning:",lat)
+                parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
+                laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
+                summa = funktioner.calculate_trip(priser,1, parkering, laddning)
+                SUM.append(summa)
+                funktioner.avsluta_resa(id_resan,lat,long)
         except: # pylint: disable=bare-except
             pass
         print("Simulering",i,"klar")
-        i += 1
+        j += 1
 
 if __name__=='__main__':
     while True:
@@ -93,7 +109,12 @@ if __name__=='__main__':
             funktioner.skapa_data_cyklar(STAD)
         elif OPTION == 2:
             STAD = funktioner.välja_stad()
-            simulera(STAD, simuleringar)
+            simuleringar = int(input("Hur många simuleringar vill du göra? "))
+            jobs = []
+            for i in range(1,simuleringar+1):
+                jobs.append((i, STAD))
+            start_simulations(jobs)
+            #simulera(STAD, 1)
         elif OPTION == 3:
             print('Avslutar simuleringsprogrammet')
             exit()

@@ -102,9 +102,9 @@ def välja_stad():
     val = int(input("Välj stad: "))
     if val == 1:
         return "61a76026bb53f131584de9b1"
-    if val == 2:
+    elif val == 2:
         return "61a7603dbb53f131584de9b3"
-    if val == 3:
+    elif val == 3:
         return "61a8fd85ea20b50150945887"
 
 def starta_resan(user_id,bike_id,lat,long):
@@ -136,7 +136,6 @@ def avsluta_resa(id_resan,lat,long):
 def kontroll_plats_laddstation(lat, long, parkeringar):
     """Kontrollera om en plats är en laddstation"""
     i = 0
-    print()
     while i < len(parkeringar["stations"]["charge_stations"]):
         se_lat = parkeringar["stations"]["charge_stations"][i]["coordinates"]["southeast"]["lat"]
         nw_lat = parkeringar["stations"]["charge_stations"][i]["coordinates"]["northwest"]["lat"]
@@ -181,7 +180,16 @@ def calculate_trip(priser, minuter, parkering=None, laddning=None):
         summa += straffavgift
     return summa
 
-def uppdatera_cykel(status_batteri,lat,long,bike_id,hastighet,distans,pris):
+def uppdatera_cykel(
+    status_batteri,
+    lat,
+    long,
+    bike_id,
+    hastighet,
+    distans,
+    pris,
+    charge_id=None,
+    parking_id=None):
     """Uppdatera batteri och position"""
     uppdatera_cykeln = [
         {"propName": "battery_status", "value": status_batteri},
@@ -189,7 +197,9 @@ def uppdatera_cykel(status_batteri,lat,long,bike_id,hastighet,distans,pris):
         {"propName": "latest_trip", "value":
         {"average_speed":hastighet,
         "distance": distans,
-        "price": pris}}
+        "price": pris,
+        "charge_id": charge_id,
+        "parking_id": parking_id}}
     ]
     response = requests.patch(LINK+'bikes/'+bike_id, json =uppdatera_cykeln)
     SUM.append(response)
@@ -223,7 +233,16 @@ def travel_time(pristariff,cykel_id,person_id):
     else:
         return räckvidd_batteri
 
-def slumpa_riktning(lat,long,person_id,bike_id,balans_konto,id_resan, response_resa, priser):
+def slumpa_riktning(
+    person_id,
+    bike_id,
+    balans_konto,
+    id_resan,
+    response_resa,
+    priser,
+    parkeringar,
+    parkering,
+    laddning):
     """Slumpa riktning på cykeln"""
     cykel = requests.get(LINK+'bikes/'+bike_id).json()
     status_batteri =float(cykel["bike"]["battery_status"])
@@ -248,7 +267,9 @@ def slumpa_riktning(lat,long,person_id,bike_id,balans_konto,id_resan, response_r
             pris = calculate_trip(priser, 1)
             kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
             t.sleep(1)
-            uppdatera_cykel(status_batteri,lat,long, bike_id, hastighet, sträcka, pris)
+            parkering = kontroll_plats_parkering(lat,long,parkeringar)
+            laddning = kontroll_plats_laddstation(lat,long,parkeringar)
+            uppdatera_cykel(status_batteri,lat,long, bike_id, hastighet, sträcka, pris,laddning,parkering)
         elif slumpat == 1:
             lat -= 0.001
             lat = round(lat,6)
@@ -260,7 +281,9 @@ def slumpa_riktning(lat,long,person_id,bike_id,balans_konto,id_resan, response_r
             pris = calculate_trip(priser, 1)
             kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
             t.sleep(1)
-            uppdatera_cykel(status_batteri,lat,long, bike_id, hastighet, sträcka, pris)
+            parkering = kontroll_plats_parkering(lat,long,parkeringar)
+            laddning = kontroll_plats_laddstation(lat,long,parkeringar)
+            uppdatera_cykel(status_batteri,lat,long, bike_id, hastighet, sträcka, pris,laddning,parkering)
         elif slumpat == 2:
             long -= 0.001
             long = round(long,6)
@@ -272,7 +295,9 @@ def slumpa_riktning(lat,long,person_id,bike_id,balans_konto,id_resan, response_r
             pris = calculate_trip(priser, 1)
             kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
             t.sleep(1)
-            uppdatera_cykel(status_batteri,lat,long, bike_id, hastighet, sträcka, pris)
+            parkering = kontroll_plats_parkering(lat,long,parkeringar)
+            laddning = kontroll_plats_laddstation(lat,long,parkeringar)
+            uppdatera_cykel(status_batteri,lat,long, bike_id, hastighet, sträcka, pris,laddning,parkering)
         elif slumpat == 3:
             long += 0.001
             long = round(long,6)
@@ -284,7 +309,9 @@ def slumpa_riktning(lat,long,person_id,bike_id,balans_konto,id_resan, response_r
             pris = calculate_trip(priser, 1)
             kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
             t.sleep(1)
-            uppdatera_cykel(status_batteri,lat,long, bike_id, hastighet, sträcka, pris)
+            parkering = kontroll_plats_parkering(lat,long,parkeringar)
+            laddning = kontroll_plats_laddstation(lat,long,parkeringar)
+            uppdatera_cykel(status_batteri,lat,long, bike_id, hastighet, sträcka, pris,laddning,parkering)
         i += 1
 
 
@@ -302,9 +329,7 @@ def räkna_minuter(response_resa):
         duration = stop_tid-start
     längd_i_sekunder = duration.total_seconds()
     längd_i_minuter = round(längd_i_sekunder/60,0)-60
-    längd_i_minuter = int(längd_i_minuter)
-    if längd_i_minuter < 1:
-        längd_i_minuter = 1
+    längd_i_minuter = max(int(längd_i_minuter),1)
     return längd_i_minuter
 
 def räkna_och_sätt_medelhastighet(sträcka, minuter):
@@ -371,6 +396,7 @@ def kontrollera_lat(lat, stad):
         else:
             return lat
 
+print(kontrollera_lat(59.383555,"61a8fd85ea20b5010945887"))
 def kontrollera_long(long, stad):
     """Kontroll av longitud i stad"""
     if stad == "61a76026bb53f131584de9b1":
