@@ -163,8 +163,9 @@ def kontroll_plats_parkering(lat, long, parkeringar):
 
 def kontroll_tid_batteri_saldo(tid,batteri,saldo,id_resan,lat,long):
     """Kontroll för att ev avsluta resa"""
-    if tid < 0 or batteri < 0 or saldo < 0:
+    if tid < 0 or batteri < 1.2 or saldo < 0:
         avsluta_resa(id_resan,lat,long)
+        print("Avslutar resa")
 
 def calculate_trip(priser, minuter, parkering=None, laddning=None):
     """Räkna ut kostnad för användning"""
@@ -253,6 +254,7 @@ def slumpa_riktning(
     long=hämta_long(bike_id)
     sträcka = 0
     tid = travel_time(pris_per_minut,bike_id,person_id)
+    kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
     i = 0
     while i < antal:
         slumpat = rand.randint(0,3)
@@ -396,7 +398,7 @@ def kontrollera_lat(lat, stad):
         else:
             return lat
 
-print(kontrollera_lat(59.383555,"61a8fd85ea20b5010945887"))
+#print(kontrollera_lat(59.383555,"61a8fd85ea20b5010945887"))
 def kontrollera_long(long, stad):
     """Kontroll av longitud i stad"""
     if stad == "61a76026bb53f131584de9b1":
@@ -426,3 +428,36 @@ def kontrollera_long(long, stad):
             return nw_long
         else:
             return long
+
+kontroll_tid_batteri_saldo(2,-1,2,"id_resan","lat","long")
+#Kontroll bike id
+#Kontroll user id
+#cykel = requests.get(LINK+"bikes/"+"61a8aec803d845a108c53774").json()
+#print(cykel['bike'])
+#cykel = {}
+#cykel_info ={
+#    '_id':	cykel['bike']['_id'],
+#    'city_id':	cykel['bike']['city_id'],
+#    'charge_id':	cykel['bike']['charge_id'],
+#    'parking_id':	cykel['bike']['parking_id'],
+#    'bike_status': cykel['bike']['bike_status'],
+#    'battery_status':	cykel['bike']['battery_status'],
+#    'coordinates': {
+#        'lat':	cykel['bike']['coordinates']['lat'],
+#        'long': cykel['bike']['coordinates']['long']
+#    },
+#    'maintenance':	cykel['bike']['maintenance'],
+#    'latest_trip': {
+#        'average_speed': cykel['bike']['latest_trip']['average_speed'],
+#        'distance':	cykel['bike']['latest_trip']['distance'],
+#        'price':	cykel['bike']['latest_trip']['price'],
+#        'charge_id': cykel['bike']['latest_trip']['charge_id'],
+#        'parking_id': cykel['bike']['latest_trip']['parking_id']
+#    }
+#    }
+#print(cykel_info)
+#battery_status = cykel_info['battery_status']
+#print(cykel_info['battery_status'])
+#cykel_info['battery_status'] -= 1.2
+#print(cykel_info['battery_status'])
+#print(cykel_info)
