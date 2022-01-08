@@ -16,7 +16,7 @@ USER_ID = "619f6ee3d0b6c914a2b58514"
 LINK = "http://localhost:1337/v1/"
 SUM = []
 cykel = requests.get(LINK+"bikes/"+BIKE_ID).json()
-#print(funktioner.cykel_info)
+TEXT = "I vilken riktning vill du åka? (norr, söder, öster, väster) (Avsluta med q/Q) "
 cykel_info ={
     '_id': cykel['bike']['_id'],
     'city_id': cykel['bike']['city_id'],
@@ -55,25 +55,30 @@ start_avgift = priser["prices"][0]["starting_fee"]
 straffavgift = priser["prices"][0]["penalty_fee"]
 avdrag_bra_parkering = priser["prices"][0]["discount"]
 rese_tid = balans_konto / pris_per_minut
+tid_att_resa = funktioner.travel_time(pris_per_minut,BIKE_ID,USER_ID)
 
-def resa(konto_balans):
+def resa(konto_balans,text_för_riktning,info_cykel,tid):
     """För resor"""
     cykel_länk = requests.get(LINK+"bikes/"+BIKE_ID).json()
-    tid = funktioner.travel_time(pris_per_minut,BIKE_ID,USER_ID)
+    #lat = info_cykel["coordinates"]["lat"]
     lat = cykel_länk["bike"]["coordinates"]["lat"]
+    #print(lat)
     long = cykel_länk["bike"]["coordinates"]["long"]
-    batteri_status =float(cykel_länk["bike"]["battery_status"])
+    #long = info_cykel["coordinates"]["lat"]
+    #print(info_cykel["coordinates"]["lat"])
+    #batteri_status =float(cykel_länk["bike"]["battery_status"])
+    batteri_status = info_cykel["battery_status"]
     id_resan= funktioner.starta_resan(USER_ID,BIKE_ID,lat,long)
     response_resa = requests.get(LINK+'trips/'+id_resan).json()
     vädersträck = ["norr", "söder", "öster", "väster"]
-    text_riktning = "I vilken riktning vill du åka? (norr, söder, öster, väster) (Avsluta med q/Q) "
-    riktning = input(text_riktning)
+    riktning = input(text_för_riktning)
     sträcka = 0
 
     while True:
         print("Check av batteri & konto")
         if batteri_status < 1.2 or konto_balans < 0:
             funktioner.avsluta_resa(id_resan,lat,long)
+            break
         if riktning in vädersträck:
             print(f"Du färdas {riktning}")
             if riktning == "norr":
@@ -214,7 +219,7 @@ if __name__=='__main__':
             print('Du angav inte en giltig siffra ...')
         #Kontrollera val
         if OPTION == 1:
-            resa(balans_konto)
+            resa(balans_konto,TEXT,cykel_info,tid_att_resa)
         elif OPTION == 2:
             print('Avslutar cykelns program')
             sys.exit()
