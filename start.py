@@ -9,8 +9,8 @@ import funktioner
 
 
 #API-länkar
-#BIKE_ID = input("Ange cykel-id:")
-#USER_ID = input("Ange användar-id:")
+BIKE_ID = input("Ange cykel-id:")
+USER_ID = input("Ange användar-id:")
 BIKE_ID = "61a8aec803d845a108c53774"
 USER_ID = "619f6ee3d0b6c914a2b58514"
 LINK = "http://localhost:1337/v1/"
@@ -18,17 +18,17 @@ SUM = []
 cykel = requests.get(LINK+"bikes/"+BIKE_ID).json()
 #print(funktioner.cykel_info)
 cykel_info ={
-    '_id':	cykel['bike']['_id'],
-    'city_id':	cykel['bike']['city_id'],
-    'charge_id':	cykel['bike']['charge_id'],
-    'parking_id':	cykel['bike']['parking_id'],
+    '_id': cykel['bike']['_id'],
+    'city_id': cykel['bike']['city_id'],
+    'charge_id': cykel['bike']['charge_id'],
+    'parking_id': cykel['bike']['parking_id'],
     'bike_status': cykel['bike']['bike_status'],
-    'battery_status':	cykel['bike']['battery_status'],
+    'battery_status': cykel['bike']['battery_status'],
     'coordinates': {
-        'lat':	cykel['bike']['coordinates']['lat'],
+        'lat': cykel['bike']['coordinates']['lat'],
         'long': cykel['bike']['coordinates']['long']
     },
-    'maintenance':	cykel['bike']['maintenance'],
+    'maintenance': cykel['bike']['maintenance'],
     'latest_trip': {
         'average_speed': cykel['bike']['latest_trip']['average_speed'],
         'distance':	cykel['bike']['latest_trip']['distance'],
@@ -181,7 +181,7 @@ def resa(konto_balans):
             text_riktning="I vilken riktning vill du åka?(norr, söder, öster, väster) (Avslut q/Q) "
             riktning = input(text_riktning)
 
-        elif "q" == riktning or "Q" == riktning:
+        elif riktning in ('q', 'Q'):
             #Avsluta resa
             cykel_ny = requests.get(LINK+'bikes/'+BIKE_ID).json()
             lat = cykel_ny["bike"]["coordinates"]["lat"]
