@@ -9,5 +9,5 @@ Användaren anger cykel-id och user-id som fås från appen, för att kunna star
 
 ## Simulering
 Du har flera menyval.
-Välj att skapa x antal personer/cklar
+Välj att skapa x antal personer/cyklar
 I simuleringen anger man vilken stad man vill genomföra simuleringen i, samt antalet simuleringa som ska genomföras.
