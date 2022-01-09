@@ -3,8 +3,10 @@
 Simuleringsprogram för skapandet av personer, cyklar och simulera körning.
 """
 import concurrent.futures
+import sys
 import requests
 import funktioner
+
 
 LINK = "http://localhost:1337/v1/"
 SUM = []
@@ -42,7 +44,11 @@ def simulera(stad,antal_simuleringar):
 
         #Kontrollera cykelns status
         cykel = requests.get(LINK+'bikes/'+cykel_id).json()
-
+        print(cykel)
+        print(cykel["bike"]["bike_status"])
+        print(float(cykel["bike"]["battery_status"]))
+        print(person["user"]["balance"])
+        print(person)
         #Kontrollera om ledig
         try:
             bike_status = cykel["bike"]["bike_status"]
@@ -50,7 +56,7 @@ def simulera(stad,antal_simuleringar):
             balans_konto = person["user"]["balance"]
 
         #Kontrollera batteri och saldo
-            if bike_status == "available" and status_batteri > 0 and balans_konto > 0:
+            if bike_status == "available" and status_batteri > 1.2 and balans_konto > 0:
                 print("Grönt ljus")
 
             #Sätt lat och long
@@ -65,19 +71,19 @@ def simulera(stad,antal_simuleringar):
                 print(id_resan)
                 response_resa = requests.get(LINK+'trips/'+id_resan).json()
                 priser = requests.get(LINK+"prices").json()
+                info = {
+                    "person_id":person_id,
+                    "cykel_id": cykel_id,
+                    "balans_konto": balans_konto,
+                    "id_resan": id_resan,
+                    "response_resa": response_resa,
+                    "priser": priser,
+                    "parkeringar": parkeringar,
+                    "parkering": parkering,
+                    "laddning": laddning
+                }
 
-                #Slumpa riktning
-                funktioner.slumpa_riktning(
-                person_id,
-                cykel_id,
-                balans_konto,
-                id_resan,
-                response_resa,
-                priser,
-                parkeringar,
-                parkering,
-                laddning)
-                #Kontrollera cykelns status, om illa avsluta direkt
+                funktioner.slumpa_riktning(info)
 
                 #Avsluta resa
                 cykel = requests.get(LINK+'bikes/'+cykel_id).json()
@@ -90,8 +96,8 @@ def simulera(stad,antal_simuleringar):
                 SUM.append(summa)
                 funktioner.avsluta_resa(id_resan,lat,long)
         except: # pylint: disable=bare-except
-            pass
-        print("Simulering",i,"klar")
+            print("Uppfyller ej kraven")
+        print("Simulering",j,"klar")
         j += 1
 
 if __name__=='__main__':
@@ -117,6 +123,6 @@ if __name__=='__main__':
             #simulera(STAD, 1)
         elif OPTION == 3:
             print('Avslutar simuleringsprogrammet')
-            exit()
+            sys.exit()
         else:
             print('Du måste ange ett nummer!')

@@ -167,11 +167,10 @@ def kontroll_plats_parkering(lat, long, parkeringar):
             return parkeringar["stations"]["parking_stations"][i]["_id"]
         i+=1
 
-def kontroll_tid_batteri_saldo(tid,batteri,saldo,id_resan,lat,long):
+def kontroll_tid_batteri_saldo(tid,batteri,saldo):
     """Kontroll för att ev avsluta resa"""
     if tid < 0 or batteri < 1.2 or saldo < 0:
-        avsluta_resa(id_resan,lat,long)
-        print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
+        return True
 
 def calculate_trip(priser, minuter, parkering=None, laddning=None):
     """Räkna ut kostnad för användning"""
@@ -237,27 +236,21 @@ def travel_time(pristariff,cykel_id,person_id):
     rese_tid = balans_konto / pristariff
     return min(räckvidd_batteri,rese_tid)
 
-def slumpa_riktning(
-    person_id,
-    bike_id,
-    balans_konto,
-    id_resan,
-    response_resa,
-    priser,
-    parkeringar,
-    parkering,
-    laddning):
+def slumpa_riktning(oi):
     """Slumpa riktning på cykeln"""
-    cykel = requests.get(LINK+'bikes/'+bike_id).json()
+    print(oi)
+    cykel = requests.get(LINK+'bikes/'+oi["cykel_id"]).json()
     status_batteri =float(cykel["bike"]["battery_status"])
     stad = cykel["bike"]["city_id"]
-    pris_per_minut = priser["prices"][0]["price_per_minute"]
+    pris_per_minut = oi["priser"]["prices"]["price_per_minute"]
     antal = rand.randint(1,11)
-    lat=hämta_lat(bike_id)
-    long=hämta_long(bike_id)
+    lat=hämta_lat(oi["cykel_id"])
+    long=hämta_long(oi["cykel_id"])
     sträcka = 0
-    tid = travel_time(pris_per_minut,bike_id,person_id)
-    kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
+    tid = travel_time(pris_per_minut,oi["cykel_id"],oi["person_id"])
+    if kontroll_tid_batteri_saldo(tid,status_batteri,oi["balans_konto"]):
+        print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
+        avsluta_resa(oi["id_resan"],lat,long)
     i = 0
     while i < antal:
         slumpat = rand.randint(0,3)
@@ -267,60 +260,68 @@ def slumpa_riktning(
             lat = kontrollera_lat(lat,stad)
             status_batteri -= 1.2
             sträcka += 57
-            minuter =räkna_minuter(response_resa)
+            minuter =räkna_minuter(oi["response_resa"])
             hastighet = räkna_och_sätt_medelhastighet(sträcka,minuter)
-            pris = calculate_trip(priser, 1)
-            kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
+            pris = calculate_trip(oi["priser"], 1)
+            if kontroll_tid_batteri_saldo(tid,status_batteri,oi["balans_konto"]):
+                print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
+                avsluta_resa(oi["id_resan"],lat,long)
             t.sleep(1)
-            parkering = kontroll_plats_parkering(lat,long,parkeringar)
-            laddning = kontroll_plats_laddstation(lat,long,parkeringar)
+            parkering = kontroll_plats_parkering(lat,long,oi["parkeringar"])
+            laddning = kontroll_plats_laddstation(lat,long,oi["parkeringar"])
             uppdatera_cykel(status_batteri,
-            lat,long, bike_id, hastighet, sträcka, pris,laddning,parkering)
+            lat,long, oi["cykel_id"], hastighet, sträcka, pris,laddning,parkering)
         if slumpat == 1:
             lat -= 0.001
             lat = round(lat,6)
             lat = kontrollera_lat(lat,stad)
             status_batteri -= 1.2
             sträcka += 57
-            minuter =räkna_minuter(response_resa)
+            minuter =räkna_minuter(oi["response_resa"])
             hastighet = räkna_och_sätt_medelhastighet(sträcka,minuter)
-            pris = calculate_trip(priser, 1)
-            kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
+            pris = calculate_trip(oi["priser"], 1)
+            if kontroll_tid_batteri_saldo(tid,status_batteri,oi["balans_konto"]):
+                print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
+                avsluta_resa(oi["id_resan"],lat,long)
             t.sleep(1)
-            parkering = kontroll_plats_parkering(lat,long,parkeringar)
-            laddning = kontroll_plats_laddstation(lat,long,parkeringar)
+            parkering = kontroll_plats_parkering(lat,long,oi["parkeringar"])
+            laddning = kontroll_plats_laddstation(lat,long,oi["parkeringar"])
             uppdatera_cykel(status_batteri,
-            lat,long, bike_id, hastighet, sträcka, pris,laddning,parkering)
+            lat,long, oi["cykel_id"], hastighet, sträcka, pris,laddning,parkering)
         if slumpat == 2:
             long -= 0.001
             long = round(long,6)
             long = kontrollera_long(long,stad)
             status_batteri -= 1.2
             sträcka += 57
-            minuter =räkna_minuter(response_resa)
+            minuter =räkna_minuter(oi["response_resa"])
             hastighet = räkna_och_sätt_medelhastighet(sträcka,minuter)
-            pris = calculate_trip(priser, 1)
-            kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
+            pris = calculate_trip(oi["priser"], 1)
+            if kontroll_tid_batteri_saldo(tid,status_batteri,oi["balans_konto"]):
+                print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
+                avsluta_resa(oi["id_resan"],lat,long)
             t.sleep(1)
-            parkering = kontroll_plats_parkering(lat,long,parkeringar)
-            laddning = kontroll_plats_laddstation(lat,long,parkeringar)
+            parkering = kontroll_plats_parkering(lat,long,oi["parkeringar"])
+            laddning = kontroll_plats_laddstation(lat,long,oi["parkeringar"])
             uppdatera_cykel(status_batteri,
-            lat,long, bike_id, hastighet, sträcka, pris,laddning,parkering)
+            lat,long, oi["cykel_id"], hastighet, sträcka, pris,laddning,parkering)
         if slumpat == 3:
             long += 0.001
             long = round(long,6)
             long = kontrollera_long(long,stad)
             status_batteri -= 1.2
             sträcka += 57
-            minuter =räkna_minuter(response_resa)
+            minuter =räkna_minuter(oi["response_resa"])
             hastighet = räkna_och_sätt_medelhastighet(sträcka,minuter)
-            pris = calculate_trip(priser, 1)
-            kontroll_tid_batteri_saldo(tid,status_batteri,balans_konto,id_resan,lat,long)
+            pris = calculate_trip(oi["priser"], 1)
+            if kontroll_tid_batteri_saldo(tid,status_batteri,oi["balans_konto"]):
+                print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
+                avsluta_resa(oi["id_resan"],lat,long)
             t.sleep(1)
-            parkering = kontroll_plats_parkering(lat,long,parkeringar)
-            laddning = kontroll_plats_laddstation(lat,long,parkeringar)
+            parkering = kontroll_plats_parkering(lat,long,oi["parkeringar"])
+            laddning = kontroll_plats_laddstation(lat,long,oi["parkeringar"])
             uppdatera_cykel(status_batteri,
-            lat,long, bike_id, hastighet, sträcka, pris,laddning,parkering)
+            lat,long, oi["cykel_id"], hastighet, sträcka, pris,laddning,parkering)
         i += 1
 
 
@@ -378,64 +379,60 @@ def skapa_lista_stad(stad):
 
 def kontrollera_lat(lat, stad):
     """Kontroll av latitud i stad"""
+    värde_lat = lat
     if stad == "61a76026bb53f131584de9b1":
         se_lat = 56.193013
         nw_lat = 56.152144
         if lat >= se_lat:
-            return se_lat
+            värde_lat = se_lat
         if lat <= nw_lat:
-            return nw_lat
-        else:
-            return lat
-    elif stad == "61a7603dbb53f131584de9b3":
+            värde_lat = nw_lat
+
+    if stad == "61a7603dbb53f131584de9b3":
         se_lat = 59.343886
         nw_lat = 59.310522
         if lat >= se_lat:
-            return se_lat
+            värde_lat = se_lat
         if lat <= nw_lat:
-            return nw_lat
-        else:
-            return lat
-    elif stad == "61a8fd85ea20b50150945887":
+            värde_lat = nw_lat
+
+    if stad == "61a8fd85ea20b50150945887":
         se_lat = 59.390921
         nw_lat = 59.364795
         if lat >= se_lat:
-            return se_lat
+            värde_lat =se_lat
         if lat <= nw_lat:
-            return nw_lat
-        else:
-            return lat
+            värde_lat =nw_lat
+    return värde_lat
 
-#print(kontrollera_lat(59.383555,"61a8fd85ea20b5010945887"))
+#print(kontrollera_lat(59.364790,"61a8fd85ea20b50150945887"))
 def kontrollera_long(long, stad):
     """Kontroll av longitud i stad"""
+    värde_long = long
     if stad == "61a76026bb53f131584de9b1":
         se_long = 15.634511
         nw_long = 15.559232
         if long >= se_long:
-            return se_long
+            värde_long = se_long
         if long <= nw_long:
-            return nw_long
-        else:
-            return long
+            värde_long = nw_long
+
     if stad == "61a7603dbb53f131584de9b3":
         se_long = 18.099825
         nw_long = 18.026826
         if long >= se_long:
-            return se_long
+            värde_long = se_long
         if long <= nw_long:
-            return nw_long
-        else:
-            return long
+            värde_long = nw_long
+
     if stad == "61a8fd85ea20b50150945887":
         se_long = 13.541185
         nw_long = 13.466531
         if long >= se_long:
-            return se_long
+            värde_long = se_long
         if long <= nw_long:
-            return nw_long
-        else:
-            return long
+            värde_long = nw_long
+    return värde_long
 
 #kontroll_tid_batteri_saldo(2,-1,2,"id_resan","lat","long")
 #Kontroll bike id
