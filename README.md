@@ -4,6 +4,11 @@
 
 Cykelns program och simulering för kursen pattern på BTH.
 
+## Installation
+```
+pip install -r requirements.txt
+```
+
 ## Cykelns program
 Användaren anger cykel-id och user-id som fås från appen, för att kunna starta igång cykeln.
 
