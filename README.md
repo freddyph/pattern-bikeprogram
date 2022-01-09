@@ -4,10 +4,10 @@
 
 Cykelns program och simulering för kursen pattern på BTH.
 
-##Cykelns program
+## Cykelns program
 Användaren anger cykel-id och user-id som fås från appen, för att kunna starta igång cykeln.
 
-##Simulering
+## Simulering
 Du har flera menyval.
 Välj att skapa x antal personer/cklar
 I simuleringen anger man vilken stad man vill genomföra simuleringen i, samt antalet simuleringa som ska genomföras.
