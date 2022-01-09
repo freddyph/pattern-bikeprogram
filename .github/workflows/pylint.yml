@@ -20,6 +20,7 @@ jobs:
         pip install pylint
         pip install requests
         pip install names
+        pip install python-decouple
     - name: Analysing the code with pylint
       run: |
         pylint `ls -R|grep .py$|xargs` --exit-zero
