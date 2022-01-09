@@ -4,13 +4,16 @@ Simuleringsprogram för skapandet av personer, cyklar och simulera körning.
 """
 import concurrent.futures
 import sys
+from decouple import config
 import requests
+#from requests.api import head
 import funktioner
-
 
 LINK = "http://localhost:1337/v1/"
 SUM = []
 
+API_KEY = config('JWT_SECRET')
+headers = {'x-access-token': API_KEY}
 #simuleringar = int(input("Hur många simuleringar vill du göra? "))
 
 def starta_simulering(job):
@@ -30,25 +33,25 @@ def simulera(stad,antal_simuleringar):
     while j < antal_simuleringar+1:
         #Välj person
         person_id = funktioner.välj_en_person()
-        person = requests.get(LINK+"users/"+person_id).json()
+        person = requests.get(LINK+"users/"+person_id, headers=headers).json()
 
         #Skapa lista över staden
         lista_stad =funktioner.skapa_lista_stad(stad)
 
         #Hämta parkeringar i staden
         kontroller_stad = LINK+"cities/stations/"+stad
-        parkeringar = requests.get(kontroller_stad).json()
+        parkeringar = requests.get(kontroller_stad, headers=headers).json()
 
         #Välj cykel
         cykel_id = funktioner.välj_en_cykel_i_stad(lista_stad)
 
         #Kontrollera cykelns status
-        cykel = requests.get(LINK+'bikes/'+cykel_id).json()
-        print(cykel)
-        print(cykel["bike"]["bike_status"])
-        print(float(cykel["bike"]["battery_status"]))
-        print(person["user"]["balance"])
-        print(person)
+        cykel = requests.get(LINK+'bikes/'+cykel_id, headers=headers).json()
+        #print(cykel)
+        #print(cykel["bike"]["bike_status"])
+        #print(float(cykel["bike"]["battery_status"]))
+        #print(person["user"]["balance"])
+        #print(person)
         #Kontrollera om ledig
         try:
             bike_status = cykel["bike"]["bike_status"]
@@ -68,9 +71,9 @@ def simulera(stad,antal_simuleringar):
                 print("Start-coordinater: ", lat, long)
                 #Starta resan
                 id_resan = funktioner.starta_resan(person_id,cykel_id,lat,long)
-                print(id_resan)
-                response_resa = requests.get(LINK+'trips/'+id_resan).json()
-                priser = requests.get(LINK+"prices").json()
+                #print(id_resan)
+                response_resa = requests.get(LINK+'trips/'+id_resan, headers=headers).json()
+                priser = requests.get(LINK+"prices", headers=headers).json()
                 info = {
                     "person_id":person_id,
                     "cykel_id": cykel_id,
@@ -86,10 +89,10 @@ def simulera(stad,antal_simuleringar):
                 funktioner.slumpa_riktning(info)
 
                 #Avsluta resa
-                cykel = requests.get(LINK+'bikes/'+cykel_id).json()
+                cykel = requests.get(LINK+'bikes/'+cykel_id, headers=headers).json()
                 lat = cykel["bike"]["coordinates"]["lat"]
                 long = cykel["bike"]["coordinates"]["long"]
-                print("lat inför avslutning:",lat)
+                #print("lat inför avslutning:",lat)
                 parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
                 laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
                 summa = funktioner.calculate_trip(priser,1, parkering, laddning)
@@ -97,7 +100,7 @@ def simulera(stad,antal_simuleringar):
                 funktioner.avsluta_resa(id_resan,lat,long)
         except: # pylint: disable=bare-except
             print("Uppfyller ej kraven")
-        print("Simulering",j,"klar")
+        print("Simulering klar")
         j += 1
 
 if __name__=='__main__':

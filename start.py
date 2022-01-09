@@ -6,16 +6,18 @@ import time as t
 import sys
 import requests
 import funktioner
-
+from decouple import config
 
 #API-länkar
 BIKE_ID = input("Ange cykel-id:")
 USER_ID = input("Ange användar-id:")
-BIKE_ID = "61a8aec803d845a108c53774"
-USER_ID = "619f6ee3d0b6c914a2b58514"
+#BIKE_ID = "61a8aec803d845a108c53774"
+#USER_ID = "619f6ee3d0b6c914a2b58514"
 LINK = "http://localhost:1337/v1/"
 SUM = []
-cykel = requests.get(LINK+"bikes/"+BIKE_ID).json()
+API_KEY = config('JWT_SECRET')
+headers = {'x-access-token': API_KEY}
+cykel = requests.get(LINK+"bikes/"+BIKE_ID,headers=headers).json()
 TEXT = "I vilken riktning vill du åka? (norr, söder, öster, väster) (Avsluta med q/Q) "
 cykel_info ={
     '_id': cykel['bike']['_id'],
@@ -38,11 +40,11 @@ cykel_info ={
     }
     }
 stad_cykel = cykel["bike"]["city_id"]
-user = requests.get(LINK+"users/"+USER_ID).json()
-stad = requests.get(LINK+"cities").json()
-priser = requests.get(LINK+"prices").json()
+user = requests.get(LINK+"users/"+USER_ID,headers=headers).json()
+stad = requests.get(LINK+"cities",headers=headers).json()
+priser = requests.get(LINK+"prices",headers=headers).json()
 kontroller_stad = LINK+"cities/stations/"+stad_cykel
-parkeringar = requests.get(kontroller_stad).json()
+parkeringar = requests.get(kontroller_stad,headers=headers).json()
 
 #Kunduppgifter
 kundens_id = user["user"]["_id"]
@@ -59,7 +61,7 @@ tid_att_resa = funktioner.travel_time(pris_per_minut,BIKE_ID,USER_ID)
 
 def resa(konto_balans,text_för_riktning,info_cykel,tid):
     """För resor"""
-    cykel_länk = requests.get(LINK+"bikes/"+BIKE_ID).json()
+    cykel_länk = requests.get(LINK+"bikes/"+BIKE_ID,headers=headers).json()
     #lat = info_cykel["coordinates"]["lat"]
     lat = cykel_länk["bike"]["coordinates"]["lat"]
     #print(lat)
@@ -69,7 +71,7 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
     #batteri_status =float(cykel_länk["bike"]["battery_status"])
     batteri_status = info_cykel["battery_status"]
     id_resan= funktioner.starta_resan(USER_ID,BIKE_ID,lat,long)
-    response_resa = requests.get(LINK+'trips/'+id_resan).json()
+    response_resa = requests.get(LINK+'trips/'+id_resan,headers=headers).json()
     vädersträck = ["norr", "söder", "öster", "väster"]
     riktning = input(text_för_riktning)
     sträcka = 0
@@ -90,13 +92,10 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
                 minuter =funktioner.räkna_minuter(response_resa)
                 hastighet = funktioner.räkna_och_sätt_medelhastighet(sträcka,minuter)
                 pris = funktioner.calculate_trip(priser, minuter)
-                funktioner.kontroll_tid_batteri_saldo(
-                tid, #62
-                batteri_status, #65/61
-                balans_konto,
-                id_resan,
-                lat,
-                long)
+                if funktioner.kontroll_tid_batteri_saldo(tid,batteri_status,balans_konto):
+                    print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
+                    funktioner.avsluta_resa(id_resan,lat,long)
+                    break
                 t.sleep(1)
                 parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
                 laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
@@ -117,13 +116,10 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
                 minuter =funktioner.räkna_minuter(response_resa)
                 hastighet = funktioner.räkna_och_sätt_medelhastighet(sträcka,minuter)
                 pris = funktioner.calculate_trip(priser, minuter)
-                funktioner.kontroll_tid_batteri_saldo(
-                tid,
-                batteri_status,
-                balans_konto,
-                id_resan,
-                lat,
-                long)
+                if funktioner.kontroll_tid_batteri_saldo(tid,batteri_status,balans_konto):
+                    print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
+                    funktioner.avsluta_resa(id_resan,lat,long)
+                    break
                 t.sleep(1)
                 funktioner.uppdatera_cykel(
                 batteri_status,
@@ -142,13 +138,10 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
                 minuter =funktioner.räkna_minuter(response_resa)
                 hastighet = funktioner.räkna_och_sätt_medelhastighet(sträcka,minuter)
                 pris = funktioner.calculate_trip(priser, minuter)
-                funktioner.kontroll_tid_batteri_saldo(
-                tid,
-                batteri_status,
-                balans_konto,
-                id_resan,
-                lat,
-                long)
+                if funktioner.kontroll_tid_batteri_saldo(tid,batteri_status,balans_konto):
+                    print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
+                    funktioner.avsluta_resa(id_resan,lat,long)
+                    break
                 t.sleep(1)
                 funktioner.uppdatera_cykel(
                 batteri_status,
@@ -167,13 +160,10 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
                 minuter =funktioner.räkna_minuter(response_resa)
                 hastighet = funktioner.räkna_och_sätt_medelhastighet(sträcka,minuter)
                 pris = funktioner.calculate_trip(priser, minuter)
-                funktioner.kontroll_tid_batteri_saldo(
-                tid,
-                batteri_status,
-                balans_konto,
-                id_resan,
-                lat,
-                long)
+                if funktioner.kontroll_tid_batteri_saldo(tid,batteri_status,balans_konto):
+                    print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
+                    funktioner.avsluta_resa(id_resan,lat,long)
+                    break
                 t.sleep(1)
                 funktioner.uppdatera_cykel(
                 batteri_status,
@@ -188,10 +178,10 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
 
         elif riktning in ('q', 'Q'):
             #Avsluta resa
-            cykel_ny = requests.get(LINK+'bikes/'+BIKE_ID).json()
+            cykel_ny = requests.get(LINK+'bikes/'+BIKE_ID,headers=headers).json()
             lat = cykel_ny["bike"]["coordinates"]["lat"]
             long = cykel_ny["bike"]["coordinates"]["long"]
-            response_resa = requests.get(LINK+'trips/'+id_resan).json()
+            response_resa = requests.get(LINK+'trips/'+id_resan,headers=headers).json()
             print(response_resa)
             minuter =funktioner.räkna_minuter(response_resa)
             parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
@@ -206,10 +196,6 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
             riktning = input(text_riktning)
 
 if __name__=='__main__':
-
-    #cykel = requests.get(LINK+"bikes/"+BIKE_ID).json()
-    #status_batteri =float(cykel["bike"]["battery_status"])
-    #print(status_batteri)
     while True:
         funktioner.print_menu()
         OPTION = ''

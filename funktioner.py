@@ -8,9 +8,13 @@ import time as t
 #from geopy import distance
 import requests
 import names
+from decouple import config
 
 LINK = "http://localhost:1337/v1/"
 SUM = []
+API_KEY = config('JWT_SECRET')
+headers = {'x-access-token': API_KEY}
+#print(API_KEY)
 
 def print_menu_simulering():
     """Meny program"""
@@ -54,8 +58,9 @@ def skapa_data_personer(stad):
             "account_status": account_status,
             "city": stad
         }
-        response = requests.post(LINK+'users/register', json =skapa_data)
+        response = requests.post(LINK+'users/register', json =skapa_data, headers=headers)
         SUM.append(response)
+        #print("Person skapad.")
         i += 1
 
     print("\n"+str(antal)+" personer har skapats")
@@ -88,7 +93,7 @@ def skapa_data_cyklar(stad):
             "long": long
 
         }
-        response = requests.post(LINK+'bikes', json=skapa_data)
+        response = requests.post(LINK+'bikes', json=skapa_data, headers=headers)
         SUM.append(response)
         i += 1
     print("\n"+str(antal)+" cyklar har skapats")
@@ -123,12 +128,13 @@ def starta_resan(user_id,bike_id,lat,long):
             "long":long
         }
     }
-    resa = requests.post(LINK+'trips/', json =starta_resa).json()
+    resa = requests.post(LINK+'trips/', json =starta_resa, headers=headers).json()
     id_resan = resa['startedTrip']['_id']
     return id_resan
 
 def avsluta_resa(id_resan,lat,long):
     """Avsluta en resa"""
+    print("Din resa avslutas.")
     avsluta_resan ={
         "stop_coordinates": {
             "lat": lat,
@@ -136,7 +142,7 @@ def avsluta_resa(id_resan,lat,long):
         }
     }
     #print(avsluta_resan)
-    response = requests.patch(LINK+'trips/end/'+id_resan, json =avsluta_resan)
+    response = requests.patch(LINK+'trips/end/'+id_resan, json =avsluta_resan, headers=headers)
     SUM.append(response)
 
 def kontroll_plats_laddstation(lat, long, parkeringar):
@@ -207,28 +213,28 @@ def uppdatera_cykel(
         "charge_id": charge_id,
         "parking_id": parking_id}}
     ]
-    response = requests.patch(LINK+'bikes/'+bike_id, json =uppdatera_cykeln)
+    response = requests.patch(LINK+'bikes/'+bike_id, json =uppdatera_cykeln, headers=headers)
     SUM.append(response)
 
 def hämta_lat(bike_id):
     """Hämta latitud"""
-    cykel = requests.get(LINK+"bikes/"+bike_id).json()
+    cykel = requests.get(LINK+"bikes/"+bike_id, headers=headers).json()
     lat = cykel["bike"]["coordinates"]["lat"]
     return lat
 
 
 def hämta_long(bike_id):
     """Hämta longitud"""
-    cykel = requests.get(LINK+"bikes/"+bike_id).json()
+    cykel = requests.get(LINK+"bikes/"+bike_id, headers=headers).json()
     long = cykel["bike"]["coordinates"]["long"]
     return long
 
 def travel_time(pristariff,cykel_id,person_id):
     """Program för uträkningar av batteri, kostnad och balans"""
-    cykel = requests.get(LINK+"bikes/"+cykel_id).json()
+    cykel = requests.get(LINK+"bikes/"+cykel_id, headers=headers).json()
     status_batteri = float(cykel["bike"]["battery_status"])
 
-    user = requests.get(LINK+"users/"+person_id).json()
+    user = requests.get(LINK+"users/"+person_id, headers=headers).json()
     balans_konto = user["user"]["balance"]
 
     räckvidd_batteri = int(status_batteri) *1.2
@@ -238,8 +244,8 @@ def travel_time(pristariff,cykel_id,person_id):
 
 def slumpa_riktning(oi):
     """Slumpa riktning på cykeln"""
-    print(oi)
-    cykel = requests.get(LINK+'bikes/'+oi["cykel_id"]).json()
+    #print(oi)
+    cykel = requests.get(LINK+'bikes/'+oi["cykel_id"], headers=headers).json()
     status_batteri =float(cykel["bike"]["battery_status"])
     stad = cykel["bike"]["city_id"]
     pris_per_minut = oi["priser"]["prices"]["price_per_minute"]
@@ -352,7 +358,7 @@ def räkna_och_sätt_medelhastighet(sträcka, minuter):
 
 def välj_en_person():
     """Slumpa en person baserat på antal i databasen"""
-    users = requests.get(LINK+"users/").json()
+    users = requests.get(LINK+"users/", headers=headers).json()
     antal_användare =users["count"]
     antal_användare -= 1
     utvald = rand.randint(0,antal_användare)
@@ -367,7 +373,7 @@ def välj_en_cykel_i_stad(stads_lista):
 
 def skapa_lista_stad(stad):
     """Skapa lista på cyklar för en specifik stad"""
-    bikes = requests.get(LINK+"bikes/").json()
+    bikes = requests.get(LINK+"bikes/", headers=headers).json()
     stads_lista = []
     for bike in bikes["bikes"]:
         try:
