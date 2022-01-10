@@ -90,6 +90,8 @@ def simulera(stad,antal_simuleringar):
                 summa = funktioner.calculate_trip(priser,1, parkering, laddning)
                 SUM.append(summa)
                 funktioner.avsluta_resa(id_resan,lat,long)
+                balans_konto -= summa
+                funktioner.uppdatera_saldo(person_id,balans_konto)
             else:
                 print("Nu blev det tokigt")
         except: # pylint: disable=bare-except

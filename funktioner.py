@@ -173,9 +173,9 @@ def kontroll_plats_parkering(lat, long, parkeringar):
             return parkeringar["stations"]["parking_stations"][i]["_id"]
         i+=1
 
-def kontroll_tid_batteri_saldo(tid,batteri,saldo):
+def kontroll_tid_batteri_saldo(tid,batteri,kostnad,saldo):
     """Kontroll för att ev avsluta resa"""
-    if tid < 0 or batteri < 1.2 or saldo < 0:
+    if tid < 0 or batteri < 1.2 or saldo <= kostnad:
         return True
 
 def calculate_trip(priser, minuter, parkering=None, laddning=None):
@@ -190,6 +190,7 @@ def calculate_trip(priser, minuter, parkering=None, laddning=None):
         summa -= avdrag_bra_parkering
     else:
         summa += straffavgift
+    #slutsumma = balans - summa
     return summa
 
 def uppdatera_cykel(
@@ -214,6 +215,14 @@ def uppdatera_cykel(
         "parking_id": parking_id}}
     ]
     response = requests.patch(LINK+'bikes/'+bike_id, json =uppdatera_cykeln, headers=headers)
+    SUM.append(response)
+
+def uppdatera_saldo(user_id,saldo):
+    """Uppdatera batteri och position"""
+    uppdatera_saldot = [
+        {"propName": "balance", "value": saldo}
+    ]
+    response = requests.patch(LINK+'users/'+user_id, json =uppdatera_saldot, headers=headers)
     SUM.append(response)
 
 def hämta_lat(bike_id):
@@ -254,8 +263,8 @@ def slumpa_riktning(oi):
     long=hämta_long(oi["cykel_id"])
     sträcka = 0
     tid = travel_time(pris_per_minut,oi["cykel_id"],oi["person_id"])
-    print("tid",tid)
-    if kontroll_tid_batteri_saldo(tid,status_batteri,oi["balans_konto"]):
+    pris = 0
+    if kontroll_tid_batteri_saldo(tid,status_batteri,pris,oi["balans_konto"]):
         print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
         avsluta_resa(oi["id_resan"],lat,long)
     i = 0
@@ -269,8 +278,8 @@ def slumpa_riktning(oi):
             sträcka += 57
             minuter =räkna_minuter(oi["response_resa"])
             hastighet = räkna_och_sätt_medelhastighet(sträcka,minuter)
-            pris = calculate_trip(oi["priser"], 1)
-            if kontroll_tid_batteri_saldo(tid,status_batteri,oi["balans_konto"]):
+            pris = calculate_trip(oi["priser"], 1,oi["balans_konto"])
+            if kontroll_tid_batteri_saldo(tid,status_batteri,pris,oi["balans_konto"]):
                 print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                 avsluta_resa(oi["id_resan"],lat,long)
             t.sleep(1)
@@ -286,8 +295,8 @@ def slumpa_riktning(oi):
             sträcka += 57
             minuter =räkna_minuter(oi["response_resa"])
             hastighet = räkna_och_sätt_medelhastighet(sträcka,minuter)
-            pris = calculate_trip(oi["priser"], 1)
-            if kontroll_tid_batteri_saldo(tid,status_batteri,oi["balans_konto"]):
+            pris = calculate_trip(oi["priser"], 1,oi["balans_konto"])
+            if kontroll_tid_batteri_saldo(tid,status_batteri,pris,oi["balans_konto"]):
                 print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                 avsluta_resa(oi["id_resan"],lat,long)
             t.sleep(1)
@@ -303,8 +312,8 @@ def slumpa_riktning(oi):
             sträcka += 57
             minuter =räkna_minuter(oi["response_resa"])
             hastighet = räkna_och_sätt_medelhastighet(sträcka,minuter)
-            pris = calculate_trip(oi["priser"], 1)
-            if kontroll_tid_batteri_saldo(tid,status_batteri,oi["balans_konto"]):
+            pris = calculate_trip(oi["priser"], 1,oi["balans_konto"])
+            if kontroll_tid_batteri_saldo(tid,status_batteri,pris,oi["balans_konto"]):
                 print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                 avsluta_resa(oi["id_resan"],lat,long)
             t.sleep(1)
@@ -320,8 +329,8 @@ def slumpa_riktning(oi):
             sträcka += 57
             minuter =räkna_minuter(oi["response_resa"])
             hastighet = räkna_och_sätt_medelhastighet(sträcka,minuter)
-            pris = calculate_trip(oi["priser"], 1)
-            if kontroll_tid_batteri_saldo(tid,status_batteri,oi["balans_konto"]):
+            pris = calculate_trip(oi["priser"], 1,oi["balans_konto"])
+            if kontroll_tid_batteri_saldo(tid,status_batteri,pris,oi["balans_konto"]):
                 print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                 avsluta_resa(oi["id_resan"],lat,long)
             t.sleep(1)
@@ -346,7 +355,7 @@ def räkna_minuter(response_resa):
         duration = stop_tid-start
     längd_i_sekunder = duration.total_seconds()
     längd_i_minuter = round(längd_i_sekunder/60,0)-60
-    print("minuter:", längd_i_minuter)
+    #print("minuter:", längd_i_minuter)
     längd_i_minuter = max(int(längd_i_minuter),1)
     return längd_i_minuter
 

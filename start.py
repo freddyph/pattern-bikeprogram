@@ -12,7 +12,7 @@ from decouple import config
 #BIKE_ID = input("Ange cykel-id:")
 #USER_ID = input("Ange användar-id:")
 BIKE_ID = "61a8aec803d845a108c53774"
-USER_ID = "619f6ee3d0b6c914a2b58514"
+USER_ID = "61b3d83f5bb9e290b5ee0c3b"
 LINK = "http://localhost:1337/v1/"
 SUM = []
 API_KEY = config('JWT_SECRET')
@@ -63,8 +63,10 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
     """För resor"""
     cykel_länk = requests.get(LINK+"bikes/"+BIKE_ID,headers=headers).json()
     #lat = info_cykel["coordinates"]["lat"]
-    lat = cykel_länk["bike"]["coordinates"]["lat"]
     #print(lat)
+    #info_cykel["coordinates"]["lat"]+= 0.001
+    lat = cykel_länk["bike"]["coordinates"]["lat"]
+    #lat += 0.001
     long = cykel_länk["bike"]["coordinates"]["long"]
     #long = info_cykel["coordinates"]["lat"]
     #print(info_cykel["coordinates"]["lat"])
@@ -78,13 +80,13 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
 
     while True:
         print("Check av batteri & konto")
-        if batteri_status < 1.2 or konto_balans < 0:
+        if batteri_status < 1.2 or konto_balans < 10:
             funktioner.avsluta_resa(id_resan,lat,long)
             break
         if riktning in vädersträck:
             print(f"Du färdas {riktning}")
             if riktning == "norr":
-                lat += 0.001
+                lat+= 0.001
                 lat = round(lat,6)
                 lat = funktioner.kontrollera_lat(lat,cykel["bike"]["city_id"])
                 batteri_status -= 1.2
@@ -92,9 +94,12 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
                 minuter =funktioner.räkna_minuter(response_resa)
                 hastighet = funktioner.räkna_och_sätt_medelhastighet(sträcka,minuter)
                 pris = funktioner.calculate_trip(priser, minuter)
-                if funktioner.kontroll_tid_batteri_saldo(tid,batteri_status,balans_konto):
+
+                if funktioner.kontroll_tid_batteri_saldo(tid,batteri_status,pris,konto_balans):
                     print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                     funktioner.avsluta_resa(id_resan,lat,long)
+                    konto_balans -= pris
+                    funktioner.uppdatera_saldo(USER_ID,konto_balans)
                     break
                 t.sleep(1)
                 parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
@@ -108,7 +113,7 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
                 sträcka,
                 pris,laddning,parkering)
             elif riktning == "söder":
-                lat -= 0.001
+                lat-= 0.001
                 lat = round(lat,6)
                 lat = funktioner.kontrollera_lat(lat,cykel["bike"]["city_id"])
                 batteri_status -= 1.2
@@ -116,9 +121,12 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
                 minuter =funktioner.räkna_minuter(response_resa)
                 hastighet = funktioner.räkna_och_sätt_medelhastighet(sträcka,minuter)
                 pris = funktioner.calculate_trip(priser, minuter)
-                if funktioner.kontroll_tid_batteri_saldo(tid,batteri_status,balans_konto):
+                konto_balans -= pris
+                if funktioner.kontroll_tid_batteri_saldo(tid,batteri_status,pris,konto_balans):
                     print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                     funktioner.avsluta_resa(id_resan,lat,long)
+                    konto_balans -= pris
+                    funktioner.uppdatera_saldo(USER_ID,konto_balans)
                     break
                 t.sleep(1)
                 funktioner.uppdatera_cykel(
@@ -138,9 +146,12 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
                 minuter =funktioner.räkna_minuter(response_resa)
                 hastighet = funktioner.räkna_och_sätt_medelhastighet(sträcka,minuter)
                 pris = funktioner.calculate_trip(priser, minuter)
-                if funktioner.kontroll_tid_batteri_saldo(tid,batteri_status,balans_konto):
+
+                if funktioner.kontroll_tid_batteri_saldo(tid,batteri_status,pris,konto_balans):
                     print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                     funktioner.avsluta_resa(id_resan,lat,long)
+                    konto_balans -= pris
+                    funktioner.uppdatera_saldo(USER_ID,konto_balans)
                     break
                 t.sleep(1)
                 funktioner.uppdatera_cykel(
@@ -160,9 +171,12 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
                 minuter =funktioner.räkna_minuter(response_resa)
                 hastighet = funktioner.räkna_och_sätt_medelhastighet(sträcka,minuter)
                 pris = funktioner.calculate_trip(priser, minuter)
-                if funktioner.kontroll_tid_batteri_saldo(tid,batteri_status,balans_konto):
+
+                if funktioner.kontroll_tid_batteri_saldo(tid,batteri_status,pris,konto_balans):
                     print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                     funktioner.avsluta_resa(id_resan,lat,long)
+                    konto_balans -= pris
+                    funktioner.uppdatera_saldo(USER_ID,konto_balans)
                     break
                 t.sleep(1)
                 funktioner.uppdatera_cykel(
@@ -178,17 +192,27 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
 
         elif riktning in ('q', 'Q'):
             #Avsluta resa
-            cykel_ny = requests.get(LINK+'bikes/'+BIKE_ID,headers=headers).json()
-            lat = cykel_ny["bike"]["coordinates"]["lat"]
-            long = cykel_ny["bike"]["coordinates"]["long"]
+            #cykel_ny = requests.get(LINK+'bikes/'+BIKE_ID,headers=headers).json()
+            #lat = cykel_ny["bike"]["coordinates"]["lat"]
+            #long = cykel_ny["bike"]["coordinates"]["long"]
             response_resa = requests.get(LINK+'trips/'+id_resan,headers=headers).json()
             print(response_resa)
             minuter =funktioner.räkna_minuter(response_resa)
             parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
             laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
             summa = funktioner.calculate_trip(priser,minuter, parkering, laddning)
-            SUM.append(summa)
+            konto_balans -= summa
+            hastighet = funktioner.räkna_och_sätt_medelhastighet(sträcka,minuter)
             funktioner.avsluta_resa(id_resan,lat,long)
+            funktioner.uppdatera_cykel(
+                batteri_status,
+                lat,
+                long,
+                BIKE_ID,
+                hastighet,
+                sträcka,
+                summa)
+            funktioner.uppdatera_saldo(USER_ID,konto_balans)
             break
         else:
             print("Fel riktning, testa igen")
