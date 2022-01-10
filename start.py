@@ -9,10 +9,10 @@ import funktioner
 from decouple import config
 
 #API-länkar
-BIKE_ID = input("Ange cykel-id:")
-USER_ID = input("Ange användar-id:")
-#BIKE_ID = "61a8aec803d845a108c53774"
-#USER_ID = "619f6ee3d0b6c914a2b58514"
+#BIKE_ID = input("Ange cykel-id:")
+#USER_ID = input("Ange användar-id:")
+BIKE_ID = "61a8aec803d845a108c53774"
+USER_ID = "619f6ee3d0b6c914a2b58514"
 LINK = "http://localhost:1337/v1/"
 SUM = []
 API_KEY = config('JWT_SECRET')

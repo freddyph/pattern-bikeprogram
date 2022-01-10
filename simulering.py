@@ -44,20 +44,13 @@ def simulera(stad,antal_simuleringar):
 
         #Välj cykel
         cykel_id = funktioner.välj_en_cykel_i_stad(lista_stad)
-
         #Kontrollera cykelns status
         cykel = requests.get(LINK+'bikes/'+cykel_id, headers=headers).json()
-        #print(cykel)
-        #print(cykel["bike"]["bike_status"])
-        #print(float(cykel["bike"]["battery_status"]))
-        #print(person["user"]["balance"])
-        #print(person)
         #Kontrollera om ledig
         try:
             bike_status = cykel["bike"]["bike_status"]
             status_batteri =float(cykel["bike"]["battery_status"])
             balans_konto = person["user"]["balance"]
-
         #Kontrollera batteri och saldo
             if bike_status == "available" and status_batteri > 1.2 and balans_konto > 0:
                 print("Grönt ljus")
@@ -71,7 +64,6 @@ def simulera(stad,antal_simuleringar):
                 print("Start-coordinater: ", lat, long)
                 #Starta resan
                 id_resan = funktioner.starta_resan(person_id,cykel_id,lat,long)
-                #print(id_resan)
                 response_resa = requests.get(LINK+'trips/'+id_resan, headers=headers).json()
                 priser = requests.get(LINK+"prices", headers=headers).json()
                 info = {
@@ -92,12 +84,14 @@ def simulera(stad,antal_simuleringar):
                 cykel = requests.get(LINK+'bikes/'+cykel_id, headers=headers).json()
                 lat = cykel["bike"]["coordinates"]["lat"]
                 long = cykel["bike"]["coordinates"]["long"]
-                #print("lat inför avslutning:",lat)
+                print("lat inför avslutning:",lat)
                 parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
                 laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
                 summa = funktioner.calculate_trip(priser,1, parkering, laddning)
                 SUM.append(summa)
                 funktioner.avsluta_resa(id_resan,lat,long)
+            else:
+                print("Nu blev det tokigt")
         except: # pylint: disable=bare-except
             print("Uppfyller ej kraven")
         print("Simulering klar")

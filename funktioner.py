@@ -244,16 +244,17 @@ def travel_time(pristariff,cykel_id,person_id):
 
 def slumpa_riktning(oi):
     """Slumpa riktning på cykeln"""
-    #print(oi)
     cykel = requests.get(LINK+'bikes/'+oi["cykel_id"], headers=headers).json()
     status_batteri =float(cykel["bike"]["battery_status"])
     stad = cykel["bike"]["city_id"]
-    pris_per_minut = oi["priser"]["prices"]["price_per_minute"]
+    #print(oi["priser"]["prices"]["price_per_minute"])
+    pris_per_minut = 3
     antal = rand.randint(1,11)
     lat=hämta_lat(oi["cykel_id"])
     long=hämta_long(oi["cykel_id"])
     sträcka = 0
     tid = travel_time(pris_per_minut,oi["cykel_id"],oi["person_id"])
+    print("tid",tid)
     if kontroll_tid_batteri_saldo(tid,status_batteri,oi["balans_konto"]):
         print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
         avsluta_resa(oi["id_resan"],lat,long)
@@ -277,7 +278,7 @@ def slumpa_riktning(oi):
             laddning = kontroll_plats_laddstation(lat,long,oi["parkeringar"])
             uppdatera_cykel(status_batteri,
             lat,long, oi["cykel_id"], hastighet, sträcka, pris,laddning,parkering)
-        if slumpat == 1:
+        elif slumpat == 1:
             lat -= 0.001
             lat = round(lat,6)
             lat = kontrollera_lat(lat,stad)
@@ -294,7 +295,7 @@ def slumpa_riktning(oi):
             laddning = kontroll_plats_laddstation(lat,long,oi["parkeringar"])
             uppdatera_cykel(status_batteri,
             lat,long, oi["cykel_id"], hastighet, sträcka, pris,laddning,parkering)
-        if slumpat == 2:
+        elif slumpat == 2:
             long -= 0.001
             long = round(long,6)
             long = kontrollera_long(long,stad)
@@ -311,7 +312,7 @@ def slumpa_riktning(oi):
             laddning = kontroll_plats_laddstation(lat,long,oi["parkeringar"])
             uppdatera_cykel(status_batteri,
             lat,long, oi["cykel_id"], hastighet, sträcka, pris,laddning,parkering)
-        if slumpat == 3:
+        elif slumpat == 3:
             long += 0.001
             long = round(long,6)
             long = kontrollera_long(long,stad)
@@ -359,16 +360,20 @@ def räkna_och_sätt_medelhastighet(sträcka, minuter):
 def välj_en_person():
     """Slumpa en person baserat på antal i databasen"""
     users = requests.get(LINK+"users/", headers=headers).json()
+    #print("Användare:",users)
     antal_användare =users["count"]
     antal_användare -= 1
     utvald = rand.randint(0,antal_användare)
+    print(users["users"][utvald]["_id"])
     return users["users"][utvald]["_id"]
 
 def välj_en_cykel_i_stad(stads_lista):
     """Slumpa en cykel baserat på stad"""
+    #print("Stadslista:",stads_lista)
     antal = len(stads_lista)
     antal -= 1
     utvald = rand.randint(0,antal)
+    print(stads_lista[utvald]["_id"])
     return stads_lista[utvald]["_id"]
 
 def skapa_lista_stad(stad):
