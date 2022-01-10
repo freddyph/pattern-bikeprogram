@@ -52,7 +52,7 @@ def simulera(stad,antal_simuleringar):
             status_batteri =float(cykel["bike"]["battery_status"])
             balans_konto = person["user"]["balance"]
         #Kontrollera batteri och saldo
-            if bike_status == "available" and status_batteri > 1.2 and balans_konto > 0:
+            if bike_status == "available" and status_batteri > 1.2 and balans_konto > 63:
                 print("Grönt ljus")
 
             #Sätt lat och long

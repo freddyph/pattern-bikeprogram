@@ -80,7 +80,7 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
 
     while True:
         print("Check av batteri & konto")
-        if batteri_status < 1.2 or konto_balans < 10:
+        if batteri_status < 1.2 or konto_balans < 63:
             funktioner.avsluta_resa(id_resan,lat,long)
             break
         if riktning in vädersträck:
