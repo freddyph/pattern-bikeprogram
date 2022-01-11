@@ -178,6 +178,8 @@ def kontroll_plats_parkering(lat, long, parkeringar):
 #skapa_data_cyklar("61a76026bb53f131584de9b1")
 def kontroll_tid_batteri_saldo(tid,batteri,kostnad,saldo):
     """Kontroll för att ev avsluta resa"""
+    if batteri < 10:
+        print("Varning din batterinivå är under 10%")
     if tid < 0 or batteri < 1.2 or saldo <= kostnad:
         return True
 
@@ -428,7 +430,6 @@ def kontrollera_lat(lat, stad):
             värde_lat =nw_lat
     return värde_lat
 
-#print(kontrollera_lat(59.364790,"61a8fd85ea20b50150945887"))
 def kontrollera_long(long, stad):
     """Kontroll av longitud i stad"""
     värde_long = long
@@ -456,36 +457,3 @@ def kontrollera_long(long, stad):
         if long <= nw_long:
             värde_long = nw_long
     return värde_long
-
-#kontroll_tid_batteri_saldo(2,-1,2,"id_resan","lat","long")
-#Kontroll bike id
-#Kontroll user id
-#cykel = requests.get(LINK+"bikes/"+"61a8aec803d845a108c53774").json()
-#print(cykel['bike'])
-#cykel = {}
-#cykel_info ={
-#    '_id':	cykel['bike']['_id'],
-#    'city_id':	cykel['bike']['city_id'],
-#    'charge_id':	cykel['bike']['charge_id'],
-#    'parking_id':	cykel['bike']['parking_id'],
-#    'bike_status': cykel['bike']['bike_status'],
-#    'battery_status':	cykel['bike']['battery_status'],
-#    'coordinates': {
-#        'lat':	cykel['bike']['coordinates']['lat'],
-#        'long': cykel['bike']['coordinates']['long']
-#    },
-#    'maintenance':	cykel['bike']['maintenance'],
-#    'latest_trip': {
-#        'average_speed': cykel['bike']['latest_trip']['average_speed'],
-#        'distance':	cykel['bike']['latest_trip']['distance'],
-#        'price':	cykel['bike']['latest_trip']['price'],
-#        'charge_id': cykel['bike']['latest_trip']['charge_id'],
-#        'parking_id': cykel['bike']['latest_trip']['parking_id']
-#    }
-#    }
-#print(cykel_info)
-#battery_status = cykel_info['battery_status']
-#print(cykel_info['battery_status'])
-#cykel_info['battery_status'] -= 1.2
-#print(cykel_info['battery_status'])
-#print(cykel_info)
