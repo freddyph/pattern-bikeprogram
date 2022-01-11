@@ -60,7 +60,6 @@ def skapa_data_personer(stad):
         }
         response = requests.post(LINK+'users/register', json =skapa_data, headers=headers)
         SUM.append(response)
-        #print("Person skapad.")
         i += 1
 
     print("\n"+str(antal)+" personer har skapats")
@@ -84,11 +83,15 @@ def skapa_data_cyklar(stad):
 
         else:
             print("Felaktigt stadsid")
-
+        response = requests.get(LINK+'cities/stations/'+stad, headers=headers).json()
+        parkering = kontroll_plats_parkering(lat,long,response)
+        laddning = kontroll_plats_laddstation(lat,long,response)
         skapa_data = {
             "city_id": stad,
             "bike_status": "available",
             "battery_status": "100",
+            "charge_id": laddning,
+            "parking_id": parkering,
             "lat": lat,
             "long": long
 
@@ -172,7 +175,7 @@ def kontroll_plats_parkering(lat, long, parkeringar):
         if is_between_lat and is_between_long:
             return parkeringar["stations"]["parking_stations"][i]["_id"]
         i+=1
-
+#skapa_data_cyklar("61a76026bb53f131584de9b1")
 def kontroll_tid_batteri_saldo(tid,batteri,kostnad,saldo):
     """Kontroll för att ev avsluta resa"""
     if tid < 0 or batteri < 1.2 or saldo <= kostnad:

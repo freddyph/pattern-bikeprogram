@@ -12,7 +12,7 @@ from decouple import config
 BIKE_ID = input("Ange cykel-id:")
 USER_ID = input("Ange användar-id:")
 #BIKE_ID = "61a8aec803d845a108c53774"
-#USER_ID = "61b3d83f5bb9e290b5ee0c3b"
+#USER_ID = "619f6ee3d0b6c914a2b58514"
 LINK = "http://localhost:1337/v1/"
 SUM = []
 API_KEY = config('JWT_SECRET')
@@ -59,9 +59,11 @@ avdrag_bra_parkering = priser["prices"][0]["discount"]
 rese_tid = balans_konto / pris_per_minut
 tid_att_resa = funktioner.travel_time(pris_per_minut,BIKE_ID,USER_ID)
 
-def resa(konto_balans,text_för_riktning,info_cykel,tid):
+def resa(text_för_riktning,info_cykel,tid):
     """För resor"""
     cykel_länk = requests.get(LINK+"bikes/"+BIKE_ID,headers=headers).json()
+    usern = requests.get(LINK+"users/"+USER_ID,headers=headers).json()
+    konto_balans = usern["user"]["balance"]
     #lat = info_cykel["coordinates"]["lat"]
     #print(lat)
     #info_cykel["coordinates"]["lat"]+= 0.001
@@ -211,7 +213,9 @@ def resa(konto_balans,text_för_riktning,info_cykel,tid):
                 BIKE_ID,
                 hastighet,
                 sträcka,
-                summa)
+                summa,
+                laddning,
+                parkering)
             funktioner.uppdatera_saldo(USER_ID,konto_balans)
             break
         else:
@@ -229,7 +233,7 @@ if __name__=='__main__':
             print('Du angav inte en giltig siffra ...')
         #Kontrollera val
         if OPTION == 1:
-            resa(balans_konto,TEXT,cykel_info,tid_att_resa)
+            resa(TEXT,cykel_info,tid_att_resa)
         elif OPTION == 2:
             print('Avslutar cykelns program')
             sys.exit()
