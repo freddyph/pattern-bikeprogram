@@ -10,10 +10,10 @@ import funktioner
 
 
 #API-länkar
-BIKE_ID = input("Ange cykel-id:")
-USER_ID = input("Ange användar-id:")
-#BIKE_ID = "61abbe04d3e8bc22cfa13a94"
-#USER_ID = "619f6ee3d0b6c914a2b58514"
+#BIKE_ID = input("Ange cykel-id:")
+#USER_ID = input("Ange användar-id:")
+BIKE_ID = "61a94810e146af1a898bdb35"
+USER_ID = "61df210bacfddbc5a47a3aa6"
 LINK = "http://localhost:1337/v1/"
 SUM = []
 API_KEY = config('JWT_SECRET')
@@ -58,10 +58,13 @@ pris_per_minut = priser["prices"][0]["price_per_minute"]
 start_avgift = priser["prices"][0]["starting_fee"]
 straffavgift = priser["prices"][0]["penalty_fee"]
 avdrag_bra_parkering = priser["prices"][0]["discount"]
-rese_tid = balans_konto / pris_per_minut
-tid_att_resa = funktioner.travel_time(pris_per_minut,BIKE_ID,USER_ID)
+minimum_tid =pris_per_minut+start_avgift+straffavgift
+#print("Min",minimum_tid)
+rese_tid = balans_konto / minimum_tid
+tid_att_resa = funktioner.travel_time(minimum_tid,BIKE_ID,USER_ID)
+print("Tid",tid_att_resa)
 
-def resa(text_för_riktning,info_cykel,tid):
+def resa(text_för_riktning,info_cykel,tid, tid_resa,miniavgift):
     """För resor"""
     cykel_länk = requests.get(LINK+"bikes/"+BIKE_ID,headers=headers).json()
     usern = requests.get(LINK+"users/"+USER_ID,headers=headers).json()
@@ -81,14 +84,18 @@ def resa(text_för_riktning,info_cykel,tid):
     "öster": ["long", +0.001],
     "väster": ["long", -0.001]
     }
+    minuter = 0
 
     while True:
         print("Check av batteri & konto")
-        if batteri_status < 1.2 or konto_balans < 63:
-            print("Batteri:",batteri_status)
-            print("Konto:",konto_balans)
+        if batteri_status < 1.2 or  konto_balans < miniavgift:
+            if batteri_status < 1.2:
+                print("Du har för lite batteri, hitta en annan cykel!")
+            if konto_balans < miniavgift:
+                print("Du har för lite pengar på ditt saldo!")
             funktioner.avsluta_resa(id_resan,lat,long)
             break
+        #riktning = input(text_för_riktning)
         if riktning in vädersträck:
             print(f"Du färdas {riktning}")
             if info_väder[riktning][0] == "lat":
@@ -110,8 +117,21 @@ def resa(text_för_riktning,info_cykel,tid):
                 if konto_balans <= pris:
                     print("Avslutar resa då du har för lite pengar på ditt saldo")
                 funktioner.avsluta_resa(id_resan,lat,long)
-                konto_balans -= pris
+                if pris > konto_balans:
+                    konto_balans = 0
+                else:
+                    konto_balans -= pris
                 funktioner.uppdatera_saldo(USER_ID,konto_balans)
+                parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
+                laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
+                funktioner.uppdatera_cykel(
+                batteri_status,
+                lat,
+                long,
+                BIKE_ID,
+                hastighet,
+                sträcka,
+                pris,laddning,parkering)
                 break
             t.sleep(1)
             parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
@@ -168,7 +188,7 @@ if __name__=='__main__':
             print('Du angav inte en giltig siffra ...')
         #Kontrollera val
         if OPTION == 1:
-            resa(TEXT,cykel_info,tid_att_resa)
+            resa(TEXT,cykel_info,tid_att_resa,tid_att_resa,minimum_tid)
         elif OPTION == 2:
             print('Avslutar cykelns program')
             sys.exit()
