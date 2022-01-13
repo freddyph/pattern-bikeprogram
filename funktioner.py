@@ -10,7 +10,7 @@ import requests
 import names
 from decouple import config
 
-LINK = "http://localhost:1337/v1/"
+LINK = config('SERVER')
 SUM = []
 API_KEY = config('JWT_SECRET')
 headers = {'x-access-token': API_KEY}

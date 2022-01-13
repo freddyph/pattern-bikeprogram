@@ -10,11 +10,13 @@ import funktioner
 
 
 #API-länkar
+LINK = config('SERVER')
+print(LINK)
 BIKE_ID = input("Ange cykel-id:")
 USER_ID = input("Ange användar-id:")
 #BIKE_ID = "61a94810e146af1a898bdb35"
 #USER_ID = "61df210bacfddbc5a47a3aa6"
-LINK = "http://localhost:1337/v1/"
+LINK = config('SERVER')
 SUM = []
 API_KEY = config('JWT_SECRET')
 headers = {'x-access-token': API_KEY}
