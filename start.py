@@ -12,10 +12,10 @@ import funktioner
 #API-länkar
 LINK = config('SERVER')
 print(LINK)
-BIKE_ID = input("Ange cykel-id:")
-USER_ID = input("Ange användar-id:")
-#BIKE_ID = "61a94810e146af1a898bdb35"
-#USER_ID = "61df210bacfddbc5a47a3aa6"
+#BIKE_ID = input("Ange cykel-id:")
+#USER_ID = input("Ange användar-id:")
+BIKE_ID = "61a8aec803d845a108c53774"
+USER_ID = "61b7563dee05234b222142cb"
 LINK = config('SERVER')
 SUM = []
 API_KEY = config('JWT_SECRET')
@@ -126,7 +126,7 @@ def resa(text_för_riktning,info_cykel,tid, tid_resa,miniavgift):
                 funktioner.uppdatera_saldo(USER_ID,konto_balans)
                 parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
                 laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
-                funktioner.uppdatera_cykel(
+                funktioner.avslutning_cykel(
                 batteri_status,
                 lat,
                 long,
@@ -158,12 +158,13 @@ def resa(text_för_riktning,info_cykel,tid, tid_resa,miniavgift):
             response_resa = requests.get(LINK+'trips/'+id_resan,headers=headers).json()
             minuter =funktioner.räkna_minuter(response_resa)
             parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
+            print("Parkering:",parkering)
             laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
+            print("Laddning:",laddning)
             summa = funktioner.calculate_trip(priser,minuter, parkering, laddning)
             konto_balans -= summa
             hastighet = funktioner.räkna_och_sätt_medelhastighet(sträcka,minuter)
-            funktioner.avsluta_resa(id_resan,lat,long)
-            funktioner.uppdatera_cykel(
+            funktioner.avslutning_cykel(
                 batteri_status,
                 lat,
                 long,
@@ -173,6 +174,8 @@ def resa(text_för_riktning,info_cykel,tid, tid_resa,miniavgift):
                 summa,
                 laddning,
                 parkering)
+            funktioner.avsluta_resa(id_resan,lat,long)
+            
             funktioner.uppdatera_saldo(USER_ID,konto_balans)
             break
         else:

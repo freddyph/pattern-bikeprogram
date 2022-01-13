@@ -147,7 +147,9 @@ def avsluta_resa(id_resan,stop_lat,stop_long):
     #print(avsluta_resan)
     response = requests.patch(LINK+'trips/end/'+id_resan, json =avsluta_resan, headers=headers)
     SUM.append(response)
-
+#kontroller_stad = LINK+"cities/stations/"+"61a76026bb53f131584de9b1"
+#parkeringar = requests.get(kontroller_stad,headers=headers).json()
+#print(parkeringar)
 def kontroll_plats_laddstation(lat, long, parkeringar):
     """Kontrollera om en plats är en laddstation"""
     i = 0
@@ -161,7 +163,7 @@ def kontroll_plats_laddstation(lat, long, parkeringar):
         if is_between_lat and is_between_long:
             return parkeringar["stations"]["charge_stations"][i]["_id"]
         i+=1
-
+#print(kontroll_plats_laddstation(56.164191, 15.585593, parkeringar))
 def kontroll_plats_parkering(lat, long, parkeringar):
     """Kontrollera om en plats är en parkering"""
     i = 0
@@ -211,8 +213,8 @@ def uppdatera_cykel(
     hastighet,
     distans,
     pris,
-    charge_id=None,
-    parking_id=None):
+    charge_id,
+    parking_id):
     """Uppdatera batteri och position"""
     uppdatera_cykeln = [
         {"propName": "battery_status", "value": status_batteri},
@@ -224,7 +226,9 @@ def uppdatera_cykel(
         "charge_id": charge_id,
         "parking_id": parking_id}}
     ]
+    
     response = requests.patch(LINK+'bikes/'+bike_id, json =uppdatera_cykeln, headers=headers)
+    print(response)
     SUM.append(response)
 
 def uppdatera_saldo(user_id,saldo):
@@ -240,7 +244,33 @@ def hämta_lat(bike_id):
     cykel = requests.get(LINK+"bikes/"+bike_id, headers=headers).json()
     lat = cykel["bike"]["coordinates"]["lat"]
     return lat
-
+def avslutning_cykel(
+    status_batteri,
+    lat,
+    long,
+    bike_id,
+    hastighet,
+    distans,
+    pris,
+    charge_id,
+    parking_id):
+    """Uppdatera batteri och position"""
+    uppdatera_cykeln = [
+        {"propName": "battery_status", "value": status_batteri},
+        {"propName": "coordinates", "value": {"lat":lat, "long": long}},
+        {"propName": "charge_id", "value": charge_id},
+        {"propName": "parking_id", "value": parking_id},
+        {"propName": "latest_trip", "value":
+        {"average_speed":hastighet,
+        "distance": distans,
+        "price": pris,
+        "charge_id": charge_id,
+        "parking_id": parking_id}}
+    ]
+    
+    response = requests.patch(LINK+'bikes/'+bike_id, json =uppdatera_cykeln, headers=headers)
+    print(response)
+    SUM.append(response)
 
 def hämta_long(bike_id):
     """Hämta longitud"""
@@ -325,6 +355,16 @@ def slumpa_riktning(info):
             if kontroll_tid_batteri_saldo(tid,status_batteri,pris,info["balans_konto"]):
                 print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                 avsluta_resa(info["id_resan"],lat,long)
+                avslutning_cykel(
+                status_batteri,
+                lat,
+                long,
+                info["cykel_id"],
+                hastighet,
+                sträcka,
+                pris,
+                laddning,
+                parkering)
             t.sleep(1)
             parkering = kontroll_plats_parkering(lat,long,info["parkeringar"])
             laddning = kontroll_plats_laddstation(lat,long,info["parkeringar"])
