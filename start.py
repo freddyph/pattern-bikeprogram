@@ -5,14 +5,15 @@ Cykelns program.
 import time as t
 import sys
 import requests
-import funktioner
 from decouple import config
+import funktioner
+
 
 #API-länkar
-#BIKE_ID = input("Ange cykel-id:")
-#USER_ID = input("Ange användar-id:")
-BIKE_ID = "61abbe04d3e8bc22cfa13a94"
-USER_ID = "61b3d83f5bb9e290b5ee0c3b"
+BIKE_ID = input("Ange cykel-id:")
+USER_ID = input("Ange användar-id:")
+#BIKE_ID = "61abbe04d3e8bc22cfa13a94"
+#USER_ID = "619f6ee3d0b6c914a2b58514"
 LINK = "http://localhost:1337/v1/"
 SUM = []
 API_KEY = config('JWT_SECRET')
@@ -43,6 +44,7 @@ stad_cykel = cykel["bike"]["city_id"]
 user = requests.get(LINK+"users/"+USER_ID,headers=headers).json()
 stad = requests.get(LINK+"cities",headers=headers).json()
 priser = requests.get(LINK+"prices",headers=headers).json()
+#print(priser)
 kontroller_stad = LINK+"cities/stations/"+stad_cykel
 parkeringar = requests.get(kontroller_stad,headers=headers).json()
 
@@ -68,6 +70,7 @@ def resa(text_för_riktning,info_cykel,tid):
     long = cykel_länk["bike"]["coordinates"]["long"]
     batteri_status = info_cykel["battery_status"]
     id_resan= funktioner.starta_resan(USER_ID,BIKE_ID,lat,long)
+    print("Din resa har fått följande trip_id som ska skrivas in i din app: ", id_resan)
     response_resa = requests.get(LINK+'trips/'+id_resan,headers=headers).json()
     vädersträck = ["norr", "söder", "öster", "väster"]
     riktning = input(text_för_riktning)
@@ -88,15 +91,11 @@ def resa(text_för_riktning,info_cykel,tid):
             break
         if riktning in vädersträck:
             print(f"Du färdas {riktning}")
-            #info_väder[riktning][0]+info_väder[riktning][1]
             if info_väder[riktning][0] == "lat":
-                print("lat före",lat)
-                print(info_väder[riktning][1])
                 lat += info_väder[riktning][1]
                 lat = round(lat,6)
                 lat = funktioner.kontrollera_lat(lat,cykel["bike"]["city_id"])
             if info_väder[riktning][0] == "long":
-                print("long före ",long)
                 long += info_väder[riktning][1]
                 long = round(long,6)
                 long = funktioner.kontrollera_long(long,cykel["bike"]["city_id"])
@@ -135,13 +134,11 @@ def resa(text_för_riktning,info_cykel,tid):
             lat = cykel_ny["bike"]["coordinates"]["lat"]
             long = cykel_ny["bike"]["coordinates"]["long"]
             response_resa = requests.get(LINK+'trips/'+id_resan,headers=headers).json()
-            #print(response_resa)
             minuter =funktioner.räkna_minuter(response_resa)
             parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
             laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
             summa = funktioner.calculate_trip(priser,minuter, parkering, laddning)
             konto_balans -= summa
-            #print(konto_balans)
             hastighet = funktioner.räkna_och_sätt_medelhastighet(sträcka,minuter)
             funktioner.avsluta_resa(id_resan,lat,long)
             funktioner.uppdatera_cykel(
