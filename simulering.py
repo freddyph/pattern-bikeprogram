@@ -31,9 +31,14 @@ def simulera(stad,antal_simuleringar):
     """Simulering i specifik stad samt antal simuleringar som ska köras"""
     priser = requests.get(LINK+"prices",headers=headers).json()
     pris_per_minut = priser["prices"][0]["price_per_minute"]
+    #print(pris_per_minut)
     start_avgift = priser["prices"][0]["starting_fee"]
+    #print(start_avgift)
     straffavgift = priser["prices"][0]["penalty_fee"]
+    #print(straffavgift)
     minimum_tid =pris_per_minut+start_avgift+straffavgift
+    #print(minimum_tid)
+    #print(priser)
     j = 1
     while j < antal_simuleringar+1:
         #Välj person
@@ -70,7 +75,7 @@ def simulera(stad,antal_simuleringar):
                 #Starta resan
                 id_resan = funktioner.starta_resan(person_id,cykel_id,lat,long)
                 response_resa = requests.get(LINK+'trips/'+id_resan, headers=headers).json()
-                priser = requests.get(LINK+"prices", headers=headers).json()
+                #priser = requests.get(LINK+"prices", headers=headers).json()
                 info = {
                     "person_id":person_id,
                     "cykel_id": cykel_id,
@@ -82,8 +87,19 @@ def simulera(stad,antal_simuleringar):
                     "parkering": parkering,
                     "laddning": laddning
                 }
-
-                funktioner.slumpa_riktning(info)
+                print(info)
+                funktioner.slumpa_riktning(
+                    person_id,
+                    cykel_id,
+                    balans_konto,
+                    id_resan,
+                    response_resa,
+                    priser,
+                    parkeringar,
+                    parkering,
+                    laddning,
+                    pris_per_minut,
+                    minimum_tid)
 
                 #Avsluta resa
                 cykel = requests.get(LINK+'bikes/'+cykel_id, headers=headers).json()
