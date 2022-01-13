@@ -9,7 +9,7 @@ import requests
 #from requests.api import head
 import funktioner
 
-LINK = "http://localhost:1337/v1/"
+LINK = config('SERVER')
 SUM = []
 
 API_KEY = config('JWT_SECRET')
@@ -29,6 +29,11 @@ def start_simulations(jobb):
 
 def simulera(stad,antal_simuleringar):
     """Simulering i specifik stad samt antal simuleringar som ska köras"""
+    priser = requests.get(LINK+"prices",headers=headers).json()
+    pris_per_minut = priser["prices"][0]["price_per_minute"]
+    start_avgift = priser["prices"][0]["starting_fee"]
+    straffavgift = priser["prices"][0]["penalty_fee"]
+    minimum_tid =pris_per_minut+start_avgift+straffavgift
     j = 1
     while j < antal_simuleringar+1:
         #Välj person
@@ -52,7 +57,7 @@ def simulera(stad,antal_simuleringar):
             status_batteri =float(cykel["bike"]["battery_status"])
             balans_konto = person["user"]["balance"]
         #Kontrollera batteri och saldo
-            if bike_status == "available" and status_batteri > 1.2 and balans_konto > 63:
+            if bike_status == "available" and status_batteri > 1.2 and balans_konto > minimum_tid:
                 print("Grönt ljus")
 
             #Sätt lat och long
@@ -84,11 +89,24 @@ def simulera(stad,antal_simuleringar):
                 cykel = requests.get(LINK+'bikes/'+cykel_id, headers=headers).json()
                 lat = cykel["bike"]["coordinates"]["lat"]
                 long = cykel["bike"]["coordinates"]["long"]
+                batteri_status = cykel["bike"]["battery_status"]
+                hastighet = cykel["bike"]["latest_trip"]["average_speed"]
+                sträcka = cykel["bike"]["latest_trip"]["distance"]
                 print("lat inför avslutning:",lat)
                 parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
                 laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
                 summa = funktioner.calculate_trip(priser,1, parkering, laddning)
                 SUM.append(summa)
+                funktioner.avslutning_cykel(
+                batteri_status,
+                lat,
+                long,
+                cykel_id,
+                hastighet,
+                sträcka,
+                summa,
+                laddning,
+                parkering)
                 funktioner.avsluta_resa(id_resan,lat,long)
                 balans_konto -= summa
                 funktioner.uppdatera_saldo(person_id,balans_konto)
