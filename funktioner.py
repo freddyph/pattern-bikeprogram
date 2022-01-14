@@ -30,7 +30,7 @@ def print_menu():
     print("\nVälkommen, vad vill du göra?")
     print("\nVad vill du göra?")
     print("1. Starta resa")
-    print("2. Avsluta resa & programmet")
+    print("2. Avsluta programmet")
 
 def skapa_data_personer(stad):
     """Funktion för att skapa x antal personer"""
@@ -228,7 +228,7 @@ def uppdatera_cykel(
     ]
 
     response = requests.patch(LINK+'bikes/'+bike_id, json =uppdatera_cykeln, headers=headers)
-    print(response)
+    #print(response)
     SUM.append(response)
 
 def uppdatera_saldo(user_id,saldo):
@@ -269,7 +269,7 @@ def avslutning_cykel(
     ]
 
     response = requests.patch(LINK+'bikes/'+bike_id, json =uppdatera_cykeln, headers=headers)
-    print(response)
+    #print(response)
     SUM.append(response)
 
 def hämta_long(bike_id):
@@ -313,7 +313,7 @@ def slumpa_riktning(person_id,
     pris_per_minut = minutpris
     antal = rand.randint(1,11)
     lat=hämta_lat(cykel_id)
-    print(lat)
+    #print(lat)
     long=hämta_long(cykel_id)
     sträcka = 0
     tid = travel_time(pris_per_minut,cykel_id,person_id)
