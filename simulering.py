@@ -71,23 +71,23 @@ def simulera(stad,antal_simuleringar):
                 long = cykel["bike"]["coordinates"]["long"]
                 parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
                 laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
-                print("Start-coordinater: ", lat, long)
+                #print("Start-coordinater: ", lat, long)
                 #Starta resan
                 id_resan = funktioner.starta_resan(person_id,cykel_id,lat,long)
                 response_resa = requests.get(LINK+'trips/'+id_resan, headers=headers).json()
                 #priser = requests.get(LINK+"prices", headers=headers).json()
-                info = {
-                    "person_id":person_id,
-                    "cykel_id": cykel_id,
-                    "balans_konto": balans_konto,
-                    "id_resan": id_resan,
-                    "response_resa": response_resa,
-                    "priser": priser,
-                    "parkeringar": parkeringar,
-                    "parkering": parkering,
-                    "laddning": laddning
-                }
-                print(info)
+                #info = {
+                #    "person_id":person_id,
+                #    "cykel_id": cykel_id,
+                #    "balans_konto": balans_konto,
+                #    "id_resan": id_resan,
+                #    "response_resa": response_resa,
+                #    "priser": priser,
+                #    "parkeringar": parkeringar,
+                #    "parkering": parkering,
+                #    "laddning": laddning
+                #}
+                #print(info)
                 funktioner.slumpa_riktning(
                     person_id,
                     cykel_id,
@@ -108,7 +108,7 @@ def simulera(stad,antal_simuleringar):
                 batteri_status = cykel["bike"]["battery_status"]
                 hastighet = cykel["bike"]["latest_trip"]["average_speed"]
                 sträcka = cykel["bike"]["latest_trip"]["distance"]
-                print("lat inför avslutning:",lat)
+                #print("lat inför avslutning:",lat)
                 parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
                 laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
                 summa = funktioner.calculate_trip(priser,1, parkering, laddning)

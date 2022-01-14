@@ -135,7 +135,7 @@ def resa(text_för_riktning,info_cykel,tid, tid_resa,miniavgift):
                 sträcka,
                 pris,laddning,parkering)
                 break
-            t.sleep(1)
+            t.sleep(3)
             parkering = funktioner.kontroll_plats_parkering(lat,long,parkeringar)
             laddning = funktioner.kontroll_plats_laddstation(lat,long,parkeringar)
             funktioner.uppdatera_cykel(

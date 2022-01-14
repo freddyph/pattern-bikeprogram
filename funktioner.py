@@ -228,7 +228,7 @@ def uppdatera_cykel(
     ]
 
     response = requests.patch(LINK+'bikes/'+bike_id, json =uppdatera_cykeln, headers=headers)
-    #print(response)
+    print(response)
     SUM.append(response)
 
 def uppdatera_saldo(user_id,saldo):
@@ -269,7 +269,7 @@ def avslutning_cykel(
     ]
 
     response = requests.patch(LINK+'bikes/'+bike_id, json =uppdatera_cykeln, headers=headers)
-    #print(response)
+    print(response)
     SUM.append(response)
 
 def hämta_long(bike_id):
@@ -336,7 +336,7 @@ def slumpa_riktning(person_id,
             if kontroll_tid_batteri_saldo(tid,status_batteri,pris,balans_konto):
                 print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                 avsluta_resa(id_resan,lat,long)
-            t.sleep(1)
+            t.sleep(3)
             parkering = kontroll_plats_parkering(lat,long,parkeringar)
             laddning = kontroll_plats_laddstation(lat,long,parkeringar)
             uppdatera_cykel(status_batteri,
@@ -353,7 +353,7 @@ def slumpa_riktning(person_id,
             if kontroll_tid_batteri_saldo(tid,status_batteri,pris,balans_konto):
                 print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                 avsluta_resa(id_resan,lat,long)
-            t.sleep(1)
+            t.sleep(3)
             parkering = kontroll_plats_parkering(lat,long,parkeringar)
             laddning = kontroll_plats_laddstation(lat,long,parkeringar)
             uppdatera_cykel(status_batteri,
@@ -380,7 +380,7 @@ def slumpa_riktning(person_id,
                 pris,
                 laddning,
                 parkering)
-            t.sleep(1)
+            t.sleep(3)
             parkering = kontroll_plats_parkering(lat,long,parkeringar)
             laddning = kontroll_plats_laddstation(lat,long,parkeringar)
             uppdatera_cykel(status_batteri,
@@ -397,7 +397,7 @@ def slumpa_riktning(person_id,
             if kontroll_tid_batteri_saldo(tid,status_batteri,pris,balans_konto):
                 print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                 avsluta_resa(id_resan,lat,long)
-            t.sleep(1)
+            t.sleep(3)
             parkering = kontroll_plats_parkering(lat,long,parkeringar)
             laddning = kontroll_plats_laddstation(lat,long,parkeringar)
             uppdatera_cykel(status_batteri,
@@ -405,7 +405,7 @@ def slumpa_riktning(person_id,
         i += 1
 
 
-
+#response_resa = requests.get(LINK+'trips/'+"61e1278123fc42346128234d",headers=headers).json()
 def räkna_minuter(response_resa):
     """Räknar ut hur många minuter en resa pågått"""
     start_tid = response_resa["trip"]["start_time"]
@@ -414,13 +414,16 @@ def räkna_minuter(response_resa):
         stop_tid = response_resa["trip"]["stop_time"]
         stop = datetime.strptime(stop_tid, '%Y-%m-%dT%H:%M:%S.%fZ')
         duration = stop-start
+        längd_i_sekunder = duration.total_seconds()
+        längd_i_minuter = round(längd_i_sekunder/60,1)
     except: # pylint: disable=bare-except
         stop_tid = datetime.now()
         duration = stop_tid-start
-    längd_i_sekunder = duration.total_seconds()
-    längd_i_minuter = round(längd_i_sekunder/60,1)-60
+        längd_i_sekunder = duration.total_seconds()
+        längd_i_minuter = round(längd_i_sekunder/60,1)-60
     längd_i_minuter = max(int(längd_i_minuter),1)
     return längd_i_minuter
+#print(räkna_minuter(response_resa))
 
 def räkna_och_sätt_medelhastighet(sträcka, minuter):
     """Enligt funktionsnamnet."""
