@@ -336,6 +336,19 @@ def slumpa_riktning(person_id,
             if kontroll_tid_batteri_saldo(tid,status_batteri,pris,balans_konto):
                 print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                 avsluta_resa(id_resan,lat,long)
+                parkering = kontroll_plats_parkering(lat,long,parkeringar)
+                laddning = kontroll_plats_laddstation(lat,long,parkeringar)
+                avslutning_cykel(
+                status_batteri,
+                lat,
+                long,
+                cykel_id,
+                hastighet,
+                sträcka,
+                pris,
+                laddning,
+                parkering)
+                break
             t.sleep(3)
             parkering = kontroll_plats_parkering(lat,long,parkeringar)
             laddning = kontroll_plats_laddstation(lat,long,parkeringar)
@@ -353,6 +366,19 @@ def slumpa_riktning(person_id,
             if kontroll_tid_batteri_saldo(tid,status_batteri,pris,balans_konto):
                 print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                 avsluta_resa(id_resan,lat,long)
+                parkering = kontroll_plats_parkering(lat,long,parkeringar)
+                laddning = kontroll_plats_laddstation(lat,long,parkeringar)
+                avslutning_cykel(
+                status_batteri,
+                lat,
+                long,
+                cykel_id,
+                hastighet,
+                sträcka,
+                pris,
+                laddning,
+                parkering)
+                break
             t.sleep(3)
             parkering = kontroll_plats_parkering(lat,long,parkeringar)
             laddning = kontroll_plats_laddstation(lat,long,parkeringar)
@@ -370,6 +396,8 @@ def slumpa_riktning(person_id,
             if kontroll_tid_batteri_saldo(tid,status_batteri,pris,balans_konto):
                 print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                 avsluta_resa(id_resan,lat,long)
+                parkering = kontroll_plats_parkering(lat,long,parkeringar)
+                laddning = kontroll_plats_laddstation(lat,long,parkeringar)
                 avslutning_cykel(
                 status_batteri,
                 lat,
@@ -380,6 +408,7 @@ def slumpa_riktning(person_id,
                 pris,
                 laddning,
                 parkering)
+                break
             t.sleep(3)
             parkering = kontroll_plats_parkering(lat,long,parkeringar)
             laddning = kontroll_plats_laddstation(lat,long,parkeringar)
@@ -397,6 +426,19 @@ def slumpa_riktning(person_id,
             if kontroll_tid_batteri_saldo(tid,status_batteri,pris,balans_konto):
                 print("Avslutar resa då du har för lite batteri/pengar på ditt saldo")
                 avsluta_resa(id_resan,lat,long)
+                parkering = kontroll_plats_parkering(lat,long,parkeringar)
+                laddning = kontroll_plats_laddstation(lat,long,parkeringar)
+                avslutning_cykel(
+                status_batteri,
+                lat,
+                long,
+                cykel_id,
+                hastighet,
+                sträcka,
+                pris,
+                laddning,
+                parkering)
+                break
             t.sleep(3)
             parkering = kontroll_plats_parkering(lat,long,parkeringar)
             laddning = kontroll_plats_laddstation(lat,long,parkeringar)
